@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"unsafe"
+
+	log "github.com/sirupsen/logrus"
 )
 
 /*
@@ -85,10 +86,10 @@ func main() {
 	}
 
 	var size C.snd_pcm_uframes_t
-	//fmt.Printf("Frames: %v\n", frames)
+	log.Tracef("Frames: %v\n", frames)
 	size = frames * 2
 	buffer := make([]byte, size)
-	//fmt.Printf("Buffer len: %v", len(buffer))
+	log.Tracef("Buffer len: %v", len(buffer))
 
 	rc = C.snd_pcm_hw_params_get_period_time(params, &val, &dir)
 	if rc < 0 {
@@ -108,8 +109,7 @@ func main() {
 		} else if rcl != C.long(frames) {
 			fmt.Printf("Short read, read %v frames\n", rc)
 		}
-		//fmt.Printf("rcl read: %v\n", rcl)
-		//fmt.Printf("%v\n", buffer)
+		log.Tracef("rcl read: %v\n", rcl)
 		n, err := os.Stdout.Write(buffer)
 		if err != nil && n < len(buffer) {
 			fmt.Printf("Failed to write: %v\n", err)
