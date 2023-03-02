@@ -97,6 +97,11 @@ func main() {
 	}
 	var loops C.long = 10_000_000 / C.long(val)
 
+	out, err := os.Create("output.raw")
+	if err != nil {
+		log.Fatalf("Couldn't create output file: %v", err)
+	}
+	defer out.Close()
 	for loops > 0 {
 		loops--
 		var rcl C.long
@@ -110,7 +115,7 @@ func main() {
 			fmt.Printf("Short read, read %v frames\n", rc)
 		}
 		log.Tracef("rcl read: %v\n", rcl)
-		n, err := os.Stdout.Write(buffer)
+		n, err := out.Write(buffer)
 		if err != nil && n < len(buffer) {
 			fmt.Printf("Failed to write: %v\n", err)
 		}
