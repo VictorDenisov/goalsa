@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"math/cmplx"
 	"os"
 	"unsafe"
 
+	"github.com/mjibson/go-dsp/dsputils"
+	"github.com/mjibson/go-dsp/fft"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -14,6 +17,12 @@ import (
 #include <stdint.h>
 */
 import "C"
+
+var filter []complex128
+
+func init() {
+	filter = dsputils.ZeroPad([]complex128{5}, 5)
+}
 
 // This code captures standard input
 // Redirect this files standard output into a file.
@@ -26,6 +35,10 @@ import "C"
 //
 // Import raw data using audacity with the specified parameters
 func main() {
+	testFft()
+
+	return
+
 	var handle *C.snd_pcm_t
 	var rc C.int
 
@@ -120,4 +133,36 @@ func main() {
 			fmt.Printf("Failed to write: %v\n", err)
 		}
 	}
+
+}
+
+func testFft() {
+	data := []complex128{1, 2, 3, 4, 5}
+	fmt.Printf("data: %v\n", data)
+
+	spectrum := fft.FFT(data)
+
+	fmt.Printf("spectrum: \n")
+	for i := 0; i < len(spectrum); i++ {
+		fmt.Printf("%d %0.5f\n", i, cmplx.Abs(spectrum[i]))
+	}
+
+	result := fft.Convolve(filter, data)
+	fmt.Printf("result: \n")
+	for i := 0; i < len(result); i++ {
+		fmt.Printf("%0.5f ", cmplx.Abs(result[i]))
+	}
+	fmt.Printf("\n")
+
+	for i := 0; i < len(result); i++ {
+		/*
+			if imag(result[i]) < 0.00001 {
+				fmt.Printf("%0.5d ", real(result[i]))
+			} else {
+				fmt.Printf("%0.5d ", real(result[i]))
+			}
+		*/
+		fmt.Printf("(%0.5f, %0.5f) ", real(result[i]), imag(result[i]))
+	}
+
 }
