@@ -1,11 +1,15 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
+	"math"
 	"math/cmplx"
 	"os"
 	"unsafe"
 
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/mjibson/go-dsp/dsputils"
 	"github.com/mjibson/go-dsp/fft"
 	log "github.com/sirupsen/logrus"
@@ -35,6 +39,26 @@ func init() {
 //
 // Import raw data using audacity with the specified parameters
 func main() {
+	res, _ := processFile("short.wav")
+	l := 0
+	for i := 0; i < len(res); i++ {
+		if res[i] == 1 {
+			l++
+		} else {
+			if l > 0 {
+				fmt.Printf("%v ", l)
+				l = 0
+			}
+		}
+
+	}
+	if l > 0 {
+		fmt.Printf("%v ", l)
+		l = 0
+	}
+	fmt.Printf("\n")
+	return
+
 	testFft()
 
 	return
@@ -134,6 +158,129 @@ func main() {
 		}
 	}
 
+}
+
+func ToAbs(a []complex128) []float64 {
+	r := make([]float64, len(a))
+	for i := 0; i < len(a); i++ {
+		r[i] = cmplx.Abs(a[i])
+	}
+	return r
+}
+
+func filterBuf(buf []float64) []float64 {
+	kernel := windowSincKernelHp(200, 0.14)
+	kernel = dsputils.ZeroPadF(kernel, len(buf))
+	res := fft.Convolve(dsputils.ToComplex(kernel), dsputils.ToComplex(buf))
+	drawChart("res.html", ToAbs(res))
+	return ToAbs(res)
+}
+
+func processFile(name string) (res []byte, err error) {
+	file, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	pieceNum := 0
+	res = make([]byte, 0)
+	for {
+		buf := make([]float64, 441)
+		for i := 0; i < 441; i++ {
+			var v int16
+			err := binary.Read(file, binary.LittleEndian, &v)
+			if err != nil {
+				return res, nil
+			}
+			buf[i] = float64(v)
+		}
+		fileName := fmt.Sprintf("%d.html", pieceNum)
+		drawChart(fileName, buf)
+
+		buf = filterBuf(buf)
+		fileName = fmt.Sprintf("%d_filtered.html", pieceNum)
+		drawChart(fileName, buf)
+		pieceNum++
+
+		spectrum := fft.FFTReal(buf)
+		sabs := make([]float64, len(buf))
+		for i := 0; i < len(buf); i++ {
+			sabs[i] = cmplx.Abs(spectrum[i])
+		}
+		var mx float64 = -1000000000
+		for i := 0; i < len(sabs); i++ {
+			if sabs[i] > mx {
+				mx = sabs[i]
+			}
+		}
+
+		if mx/5 > 20000 {
+			res = append(res, 1)
+		} else {
+			res = append(res, 0)
+		}
+		//fmt.Printf("%v ", math.Round(mx/5))
+
+	}
+	return res, nil
+}
+
+func rng(n int) []int {
+	r := make([]int, n)
+	for i := 0; i < n; i++ {
+		r[i] = i
+	}
+	return r
+}
+
+func drawChart(name string, buf []float64) {
+	// create a new bar instance
+	bar := charts.NewBar()
+
+	// Set global options
+	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
+		Title:    "Bar chart in Go",
+		Subtitle: "This is fun to use!",
+	}))
+	barData := make([]opts.BarData, len(buf))
+	for i := 0; i < len(buf); i++ {
+		barData[i] = opts.BarData{Value: buf[i]}
+	}
+	bar.SetXAxis(rng(len(buf))).AddSeries("A", barData)
+
+	// Put data into instance
+	f, _ := os.Create(name)
+	_ = bar.Render(f)
+}
+
+func windowSincKernelLp(m int, fc float64) []float64 {
+	h := make([]float64, m+1)
+	for i := 0; i <= m; i++ {
+		// Blackman window
+		iF := float64(i)
+		mF := float64(m)
+		mF2 := float64(m / 2)
+		w := 0.42 - 0.5*math.Cos(2*math.Pi*iF/mF) + 0.08*math.Cos(4*math.Pi*iF/mF)
+		h[i] = w * math.Sin(2*math.Pi*fc*(iF-mF2)) / (iF - mF2)
+	}
+	h[100] = 2 * math.Pi * fc
+	var sum float64 = 0
+	for i := 0; i <= m; i++ {
+		sum += h[i]
+	}
+	for i := 0; i <= m; i++ {
+		h[i] /= sum
+	}
+	return h
+}
+
+func windowSincKernelHp(m int, fc float64) []float64 {
+	hp := windowSincKernelLp(m, fc)
+	for i := 0; i < len(hp); i++ {
+		hp[i] = -hp[i]
+	}
+	hp[len(hp)/2] += 1
+	return hp
 }
 
 func testFft() {
