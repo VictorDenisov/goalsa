@@ -40,6 +40,7 @@ func init() {
 // Import raw data using audacity with the specified parameters
 func main() {
 	res, _ := processFile("short.wav")
+	fmt.Printf("%v\n", res)
 	l := 0
 	for i := 0; i < len(res); i++ {
 		if res[i] == 1 {
@@ -59,7 +60,7 @@ func main() {
 	fmt.Printf("\n")
 	return
 
-	testFft()
+	//testFft()
 
 	return
 
@@ -200,13 +201,14 @@ func processFile(name string) (res []byte, err error) {
 		buf = filterBuf(buf)
 		fileName = fmt.Sprintf("%d_filtered.html", pieceNum)
 		drawChart(fileName, buf)
-		pieceNum++
 
 		spectrum := fft.FFTReal(buf)
 		sabs := make([]float64, len(buf))
 		for i := 0; i < len(buf); i++ {
 			sabs[i] = cmplx.Abs(spectrum[i])
 		}
+		fileName = fmt.Sprintf("%d_sabs.html", pieceNum)
+		drawChart(fileName, buf)
 		var mx float64 = -1000000000
 		for i := 0; i < len(sabs); i++ {
 			if sabs[i] > mx {
@@ -220,6 +222,7 @@ func processFile(name string) (res []byte, err error) {
 			res = append(res, 0)
 		}
 		//fmt.Printf("%v ", math.Round(mx/5))
+		pieceNum++
 
 	}
 	return res, nil
@@ -283,33 +286,45 @@ func windowSincKernelHp(m int, fc float64) []float64 {
 	return hp
 }
 
+func fftConvolve(data []float64, filter []float64) []float64 {
+	n := len(data)
+	m := len(filter)
+	dataC := dsputils.ZeroPad(dsputils.ToComplex(data), n+m-1)
+	filterC := dsputils.ZeroPad(dsputils.ToComplex(filter), n+m-1)
+
+	result := fft.Convolve(filterC, dataC)
+	return ToAbs(result)
+}
+
 func testFft() {
-	data := []complex128{1, 2, 3, 4, 5}
-	fmt.Printf("data: %v\n", data)
+	data := []float64{0, 5, 10, 5, 0}
+	filter := []float64{5, 5, 5, 5, 5}
 
-	spectrum := fft.FFT(data)
-
-	fmt.Printf("spectrum: \n")
-	for i := 0; i < len(spectrum); i++ {
-		fmt.Printf("%d %0.5f\n", i, cmplx.Abs(spectrum[i]))
-	}
-
-	result := fft.Convolve(filter, data)
+	result := fftConvolve(filter, data)
 	fmt.Printf("result: \n")
 	for i := 0; i < len(result); i++ {
-		fmt.Printf("%0.5f ", cmplx.Abs(result[i]))
+		fmt.Printf("%0.5f ", result[i])
 	}
 	fmt.Printf("\n")
-
-	for i := 0; i < len(result); i++ {
-		/*
-			if imag(result[i]) < 0.00001 {
-				fmt.Printf("%0.5d ", real(result[i]))
-			} else {
-				fmt.Printf("%0.5d ", real(result[i]))
+	/*
+			result := fft.Convolve(filter, data)
+			fmt.Printf("result: \n")
+			for i := 0; i < len(result); i++ {
+				fmt.Printf("%0.5f ", cmplx.Abs(result[i]))
 			}
-		*/
-		fmt.Printf("(%0.5f, %0.5f) ", real(result[i]), imag(result[i]))
-	}
+			fmt.Printf("\n")
+
+		for i := 0; i < len(result); i++ {
+			/*
+				if imag(result[i]) < 0.00001 {
+					fmt.Printf("%0.5d ", real(result[i]))
+				} else {
+					fmt.Printf("%0.5d ", real(result[i]))
+				}
+	*/
+	/*
+			fmt.Printf("(%0.5f, %0.5f) ", real(result[i]), imag(result[i]))
+		}
+	*/
 
 }
