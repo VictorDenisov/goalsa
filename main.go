@@ -39,6 +39,17 @@ func init() {
 //
 // Import raw data using audacity with the specified parameters
 func main() {
+	/*
+		buf, _ := readFile("short.wav")
+		drawChart("signal.html", buf)
+
+		kernel := dsputils.ZeroPadF(windowSincKernelHp(200, 0.14), 200+len(buf))
+		buf = dsputils.ZeroPadF(buf, 200+len(buf))
+		filtered := ToAbs(fft.Convolve(dsputils.ToComplex(buf), dsputils.ToComplex(kernel)))
+		drawChart("filtered.html", filtered)
+
+		return
+	*/
 	res, _ := processFile("short.wav")
 	fmt.Printf("%v\n", res)
 	l := 0
@@ -201,17 +212,31 @@ func (f *Filter) Convolve(signal []float64) []float64 {
 
 func (f *Filter) FilterBuf(buf []float64) []float64 {
 	res := f.Convolve(buf)
-	fmt.Printf("res: %v\n", len(res))
-	fmt.Printf("rem: %v\n", len(f.rem))
 	for i := 0; i < len(f.rem); i++ {
 		res[i] += f.rem[i]
 	}
-	fmt.Printf("res: %v\n", len(res))
 	sig := res[0:f.blockSize]
-	fmt.Printf("sig: %v\n", len(sig))
 	f.rem = res[f.blockSize:len(res)]
 
 	return sig
+}
+
+func readFile(name string) (res []float64, err error) {
+	file, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	buf := make([]float64, 88200)
+	for i := 0; i < len(buf); i++ {
+		var v int16
+		err := binary.Read(file, binary.LittleEndian, &v)
+		if err != nil {
+			return res, nil
+		}
+		buf[i] = float64(v)
+	}
+	return buf, nil
 }
 
 func processFile(name string) (res []byte, err error) {
