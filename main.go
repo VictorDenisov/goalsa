@@ -169,15 +169,55 @@ func ToAbs(a []complex128) []float64 {
 	return r
 }
 
-func filterBuf(buf []float64) []float64 {
-	kernel := windowSincKernelHp(200, 0.14)
-	kernel = dsputils.ZeroPadF(kernel, len(buf))
-	res := fft.Convolve(dsputils.ToComplex(kernel), dsputils.ToComplex(buf))
-	drawChart("res.html", ToAbs(res))
-	return ToAbs(res)
+type Filter struct {
+	kernel    []float64
+	fft       []complex128
+	blockSize int
+	rem       []float64
+}
+
+func NewFilter(m int, fc float64, blockSize int) *Filter {
+	kernel := dsputils.ZeroPadF(windowSincKernelHp(m, fc), m+blockSize)
+	return &Filter{kernel, fft.FFTReal(kernel), blockSize, []float64{}}
+}
+
+func (f *Filter) Convolve(signal []float64) []float64 {
+	fmt.Printf("len of fft: %v\n", len(f.fft))
+	fmt.Printf("signal: %v\n", len(signal))
+	signal = dsputils.ZeroPadF(signal, len(f.fft))
+	fmt.Printf("signal: %v\n", len(signal))
+	fft_y := fft.FFTReal(signal)
+	fmt.Printf("fft_y: %v\n", len(fft_y))
+	fmt.Printf("fft: %v\n", len(f.fft))
+
+	r := make([]complex128, len(signal))
+	for i := 0; i < len(r); i++ {
+		r[i] = f.fft[i] * fft_y[i]
+	}
+	fmt.Printf("r: %v\n", len(r))
+
+	return ToAbs(fft.IFFT(r))
+}
+
+func (f *Filter) FilterBuf(buf []float64) []float64 {
+	res := f.Convolve(buf)
+	fmt.Printf("res: %v\n", len(res))
+	fmt.Printf("rem: %v\n", len(f.rem))
+	for i := 0; i < len(f.rem); i++ {
+		res[i] += f.rem[i]
+	}
+	fmt.Printf("res: %v\n", len(res))
+	sig := res[0:f.blockSize]
+	fmt.Printf("sig: %v\n", len(sig))
+	f.rem = res[f.blockSize:len(res)]
+
+	return sig
 }
 
 func processFile(name string) (res []byte, err error) {
+
+	hpFilter := NewFilter(200, 0.14, 441)
+
 	file, err := os.Open(name)
 	if err != nil {
 		return nil, err
@@ -198,7 +238,7 @@ func processFile(name string) (res []byte, err error) {
 		fileName := fmt.Sprintf("%d.html", pieceNum)
 		drawChart(fileName, buf)
 
-		buf = filterBuf(buf)
+		buf = hpFilter.FilterBuf(buf)
 		fileName = fmt.Sprintf("%d_filtered.html", pieceNum)
 		drawChart(fileName, buf)
 
