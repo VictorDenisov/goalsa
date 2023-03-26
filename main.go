@@ -28,6 +28,28 @@ func init() {
 	filter = dsputils.ZeroPad([]complex128{5}, 5)
 }
 
+func processWhole() {
+	buf, _ := readFile("short.wav")
+	drawChart("signal.html", buf)
+
+	kernel := dsputils.ZeroPadF(windowSincKernelHp(200, 0.14), 200+len(buf))
+	buf = dsputils.ZeroPadF(buf, 200+len(buf))
+	filtered := ToReal(fft.Convolve(dsputils.ToComplex(buf), dsputils.ToComplex(kernel)))
+	drawChart("filtered.html", filtered)
+
+	cut := filtered[27400:38360]
+	drawChart("cut.html", cut)
+
+	for i := 0; i < len(cut)/441; i++ {
+		fileName := fmt.Sprintf("%d.html", i)
+		segment := cut[i*441 : (i+1)*441]
+		drawChart(fileName, segment)
+		spectrum := ToAbs(fft.FFTReal(segment))
+		fileName = fmt.Sprintf("s%d.html", i)
+		drawChart(fileName, spectrum)
+	}
+}
+
 // This code captures standard input
 // Redirect this files standard output into a file.
 // Play the file using the following command:
@@ -39,17 +61,8 @@ func init() {
 //
 // Import raw data using audacity with the specified parameters
 func main() {
-	/*
-		buf, _ := readFile("short.wav")
-		drawChart("signal.html", buf)
-
-		kernel := dsputils.ZeroPadF(windowSincKernelHp(200, 0.14), 200+len(buf))
-		buf = dsputils.ZeroPadF(buf, 200+len(buf))
-		filtered := ToAbs(fft.Convolve(dsputils.ToComplex(buf), dsputils.ToComplex(kernel)))
-		drawChart("filtered.html", filtered)
-
-		return
-	*/
+	processWhole()
+	return
 	res, _ := processFile("short.wav")
 	fmt.Printf("%v\n", res)
 	l := 0
@@ -176,6 +189,17 @@ func ToAbs(a []complex128) []float64 {
 	r := make([]float64, len(a))
 	for i := 0; i < len(a); i++ {
 		r[i] = cmplx.Abs(a[i])
+	}
+	return r
+}
+
+func ToReal(a []complex128) []float64 {
+	r := make([]float64, len(a))
+	for i := 0; i < len(a); i++ {
+		if math.Abs(imag(a[i])) > 0.000001 {
+			panic("Converting complex number with non zero imaginary part")
+		}
+		r[i] = real(a[i])
 	}
 	return r
 }
