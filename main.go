@@ -32,9 +32,14 @@ func processWhole() {
 	buf, _ := readFile("short.wav")
 	drawChart("signal.html", buf)
 
-	kernel := dsputils.ZeroPadF(windowSincKernelHp(200, 0.14), 200+len(buf))
+	kernel := dsputils.ZeroPadF(windowSincKernelHp(200, 2.0/441), 200+len(buf))
 	buf = dsputils.ZeroPadF(buf, 200+len(buf))
 	filtered := ToReal(fft.Convolve(dsputils.ToComplex(buf), dsputils.ToComplex(kernel)))
+
+	buf = filtered
+	kernel = dsputils.ZeroPadF(windowSincKernelHp(200, 7.0/441), 200+len(buf))
+	buf = dsputils.ZeroPadF(buf, 200+len(buf))
+	filtered = ToReal(fft.Convolve(dsputils.ToComplex(buf), dsputils.ToComplex(kernel)))
 	drawChart("filtered.html", filtered)
 
 	cut := filtered[27400:38360]
@@ -46,8 +51,16 @@ func processWhole() {
 		drawChart(fileName, segment)
 		spectrum := ToAbs(fft.FFTReal(segment))
 		fileName = fmt.Sprintf("s%d.html", i)
+		mx := 0
+		for j := 0; j < len(spectrum); j++ {
+			if spectrum[mx] < spectrum[j] {
+				mx = j
+			}
+		}
+		fmt.Printf("%v ", mx)
 		drawChart(fileName, spectrum)
 	}
+	fmt.Printf("\n")
 }
 
 // This code captures standard input
@@ -211,7 +224,12 @@ type Filter struct {
 	rem       []float64
 }
 
-func NewFilter(m int, fc float64, blockSize int) *Filter {
+func NewHpFilter(m int, fc float64, blockSize int) *Filter {
+	kernel := dsputils.ZeroPadF(windowSincKernelHp(m, fc), m+blockSize)
+	return &Filter{kernel, fft.FFTReal(kernel), blockSize, []float64{}}
+}
+
+func NewLpFilter(m int, fc float64, blockSize int) *Filter {
 	kernel := dsputils.ZeroPadF(windowSincKernelHp(m, fc), m+blockSize)
 	return &Filter{kernel, fft.FFTReal(kernel), blockSize, []float64{}}
 }
@@ -265,7 +283,7 @@ func readFile(name string) (res []float64, err error) {
 
 func processFile(name string) (res []byte, err error) {
 
-	hpFilter := NewFilter(200, 0.14, 441)
+	hpFilter := NewHpFilter(200, 0.14, 441)
 
 	file, err := os.Open(name)
 	if err != nil {
