@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/cmplx"
 	"os"
+	"sort"
 	"unsafe"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -74,9 +75,8 @@ func processWhole() {
 //
 // Import raw data using audacity with the specified parameters
 func main() {
-	sig, res, _ := processFile("short.wav")
-	drawChart("signal.html", sig[0:80000])
-	drawChart("filtered.html", res[0:80000])
+	processFile("short.wav")
+
 	return
 
 	//testFft()
@@ -281,6 +281,13 @@ func processFile(name string) (sig []float64, res []float64, err error) {
 		}
 		sig = append(sig, buf...)
 		buf = hpFilter.FilterBuf(buf)
+		spectrum := ToAbs(fft.FFTReal(buf))
+		sort.Sort(sort.Reverse(sort.Float64Slice(spectrum)))
+		if spectrum[1]-spectrum[2] > 100000 {
+			fmt.Printf("%v ", 1)
+		} else {
+			fmt.Printf("%v ", 0)
+		}
 		/*
 					fileName := fmt.Sprintf("%d.html", pieceNum)
 					drawChart(fileName, buf)
@@ -311,6 +318,7 @@ func processFile(name string) (sig []float64, res []float64, err error) {
 		res = append(res, buf...)
 
 	}
+	fmt.Printf("\n")
 	return sig, res, nil
 }
 
