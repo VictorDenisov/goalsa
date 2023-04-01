@@ -81,7 +81,10 @@ func drawCut(cut []float64) {
 //
 // Import raw data using audacity with the specified parameters
 func main() {
-	processFile("short.wav")
+	_, res, _ := processFile("short.wav")
+
+	cut := res[27400:38360]
+	drawCut(cut)
 
 	return
 
@@ -218,7 +221,12 @@ func NewHpFilter(m int, fc float64, blockSize int) *Filter {
 }
 
 func NewLpFilter(m int, fc float64, blockSize int) *Filter {
-	kernel := dsputils.ZeroPadF(windowSincKernelHp(m, fc), m+blockSize)
+	kernel := dsputils.ZeroPadF(windowSincKernelLp(m, fc), m+blockSize)
+	return &Filter{kernel, fft.FFTReal(kernel), blockSize, []float64{}}
+}
+
+func NewBpFilter(m int, fcL float64, fcH float64, blockSize int) *Filter {
+	kernel := dsputils.ZeroPadF(windowSincKernelBp(m, fcL, fcH), m+blockSize)
 	return &Filter{kernel, fft.FFTReal(kernel), blockSize, []float64{}}
 }
 
@@ -273,7 +281,10 @@ func hann(y []float64) {
 
 func processFile(name string) (sig []float64, res []float64, err error) {
 
-	hpFilter := NewHpFilter(200, 2.0/441, 441)
+	//filter := NewHpFilter(200, 2.0/441, 441)
+	filter := NewBpFilter(200, 7.0/441, 30.0/441, 441)
+
+	//filter := NewHpFilter(200, 2.0/441, 441)
 
 	file, err := os.Open(name)
 	if err != nil {
@@ -294,19 +305,19 @@ func processFile(name string) (sig []float64, res []float64, err error) {
 			buf[i] = float64(v)
 		}
 		sig = append(sig, buf...)
-		buf = hpFilter.FilterBuf(buf)
+		buf = filter.FilterBuf(buf)
 		res = append(res, buf...)
 		hann(buf)
 		rawSpectrum := ToAbs(fft.FFTReal(buf))
-		fileName := fmt.Sprintf("%d.html", pieceNum)
-		drawChart(fileName, rawSpectrum[0:len(rawSpectrum)/2])
+		//fileName := fmt.Sprintf("%d.html", pieceNum)
+		//drawChart(fileName, rawSpectrum[0:len(rawSpectrum)/2])
 
 		spectrum := newSpectrum(rawSpectrum)
 		sort.Sort(sort.Reverse(spectrum))
 		if spectrum.units[0].magn-spectrum.units[1].magn > 50000 {
-			fmt.Printf("(%v, %v, %v, %v) ", 1, spectrum.units[0].freq, spectrum.units[1].freq, spectrum.units[2].freq)
+			fmt.Printf("%v ", 1)
 		} else {
-			fmt.Printf("(%v, %v, %v, %v) ", 0, spectrum.units[0].freq, spectrum.units[1].freq, spectrum.units[2].freq)
+			fmt.Printf("%v ", 0)
 		}
 		/*
 					fileName := fmt.Sprintf("%d.html", pieceNum)
@@ -397,6 +408,18 @@ func windowSincKernelHp(m int, fc float64) []float64 {
 	}
 	hp[len(hp)/2] += 1
 	return hp
+}
+
+func windowSincKernelBp(m int, fcL, fcH float64) []float64 {
+	lp := windowSincKernelLp(m, fcL)
+	hp := windowSincKernelHp(m, fcH)
+	bp := make([]float64, m+1)
+	for i := 0; i < len(bp); i++ {
+		bp[i] = lp[i] + hp[i]
+		bp[i] = -bp[i]
+	}
+	bp[len(bp)/2] += 1
+	return bp
 }
 
 func fftConvolve(data []float64, filter []float64) []float64 {
