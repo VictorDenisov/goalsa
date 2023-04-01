@@ -44,11 +44,16 @@ func processWhole() {
 	drawChart("filtered.html", filtered)
 
 	cut := filtered[27400:38360]
+	drawCut(cut)
+}
+
+func drawCut(cut []float64) {
 	drawChart("cut.html", cut)
 
 	for i := 0; i < len(cut)/441; i++ {
 		fileName := fmt.Sprintf("%d.html", i)
 		segment := cut[i*441 : (i+1)*441]
+		hann(segment)
 		drawChart(fileName, segment)
 		spectrum := ToAbs(fft.FFTReal(segment))
 		fileName = fmt.Sprintf("s%d.html", i)
@@ -62,6 +67,7 @@ func processWhole() {
 		drawChart(fileName, spectrum)
 	}
 	fmt.Printf("\n")
+
 }
 
 // This code captures standard input
@@ -257,6 +263,14 @@ func readFile(name string) (res []float64, err error) {
 	return buf, nil
 }
 
+func hann(y []float64) {
+	n := len(y) - 1
+	for x := 0; x < len(y); x++ {
+		v := (1 - math.Cos(2*math.Pi*float64(x)/float64(n))) / 2
+		y[x] *= v
+	}
+}
+
 func processFile(name string) (sig []float64, res []float64, err error) {
 
 	hpFilter := NewHpFilter(200, 2.0/441, 441)
@@ -269,7 +283,7 @@ func processFile(name string) (sig []float64, res []float64, err error) {
 	//pieceNum := 0
 	sig = make([]float64, 0)
 	res = make([]float64, 0)
-	for {
+	for pieceNum := 0; ; pieceNum++ {
 		buf := make([]float64, 441)
 		for i := 0; i < 441; i++ {
 			var v int16
@@ -281,12 +295,18 @@ func processFile(name string) (sig []float64, res []float64, err error) {
 		}
 		sig = append(sig, buf...)
 		buf = hpFilter.FilterBuf(buf)
-		spectrum := ToAbs(fft.FFTReal(buf))
-		sort.Sort(sort.Reverse(sort.Float64Slice(spectrum)))
-		if spectrum[1]-spectrum[2] > 100000 {
-			fmt.Printf("%v ", 1)
+		res = append(res, buf...)
+		hann(buf)
+		rawSpectrum := ToAbs(fft.FFTReal(buf))
+		fileName := fmt.Sprintf("%d.html", pieceNum)
+		drawChart(fileName, rawSpectrum[0:len(rawSpectrum)/2])
+
+		spectrum := newSpectrum(rawSpectrum)
+		sort.Sort(sort.Reverse(spectrum))
+		if spectrum.units[0].magn-spectrum.units[1].magn > 50000 {
+			fmt.Printf("(%v, %v, %v, %v) ", 1, spectrum.units[0].freq, spectrum.units[1].freq, spectrum.units[2].freq)
 		} else {
-			fmt.Printf("%v ", 0)
+			fmt.Printf("(%v, %v, %v, %v) ", 0, spectrum.units[0].freq, spectrum.units[1].freq, spectrum.units[2].freq)
 		}
 		/*
 					fileName := fmt.Sprintf("%d.html", pieceNum)
@@ -315,7 +335,6 @@ func processFile(name string) (sig []float64, res []float64, err error) {
 			//fmt.Printf("%v ", math.Round(mx/5))
 			pieceNum++
 		*/
-		res = append(res, buf...)
 
 	}
 	fmt.Printf("\n")
