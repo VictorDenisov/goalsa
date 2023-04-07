@@ -29,61 +29,6 @@ func init() {
 	filter = dsputils.ZeroPad([]complex128{5}, 5)
 }
 
-func processWhole() {
-	buf, _ := readFile("short.wav")
-	drawChart("signal.html", buf)
-
-	kernel := dsputils.ZeroPadF(windowSincKernelHp(200, 2.0/441), 200+len(buf))
-	buf = dsputils.ZeroPadF(buf, 200+len(buf))
-	filtered := ToReal(fft.Convolve(dsputils.ToComplex(buf), dsputils.ToComplex(kernel)))
-
-	buf = filtered
-	kernel = dsputils.ZeroPadF(windowSincKernelHp(200, 7.0/441), 200+len(buf))
-	buf = dsputils.ZeroPadF(buf, 200+len(buf))
-	filtered = ToReal(fft.Convolve(dsputils.ToComplex(buf), dsputils.ToComplex(kernel)))
-	drawChart("filtered.html", filtered)
-
-	cut := filtered[27400:38360]
-	drawCut(cut)
-}
-
-func drawCut(cut []float64) {
-	drawChart("cut.html", cut)
-
-	for i := 0; i < len(cut)/441; i++ {
-		fileName := fmt.Sprintf("%d.html", i)
-		segment := cut[i*441 : (i+1)*441]
-		hann(segment)
-		drawChart(fileName, segment)
-		spectrum := ToAbs(fft.FFTReal(segment))
-		fileName = fmt.Sprintf("s%d.html", i)
-		mx := 0
-		for j := 0; j < len(spectrum); j++ {
-			if spectrum[mx] < spectrum[j] {
-				mx = j
-			}
-		}
-		fmt.Printf("%v ", mx)
-		drawChart(fileName, spectrum)
-	}
-	fmt.Printf("\n")
-
-}
-
-func measureIntervals(s []bool) (es []Element) {
-	es = make([]Element, 1)
-	es[0].s = s[0]
-	es[0].d = 1
-	for i := 1; i < len(s); i++ {
-		if s[i] == es[len(es)-1].s {
-			es[len(es)-1].d++
-		} else {
-			es = append(es, Element{1, s[i]})
-		}
-	}
-	return
-}
-
 // This code captures standard input
 // Redirect this files standard output into a file.
 // Play the file using the following command:
@@ -420,4 +365,59 @@ func testFft() {
 		fmt.Printf("%0.5f ", result[i])
 	}
 	fmt.Printf("\n")
+}
+
+func processWhole() {
+	buf, _ := readFile("short.wav")
+	drawChart("signal.html", buf)
+
+	kernel := dsputils.ZeroPadF(windowSincKernelHp(200, 2.0/441), 200+len(buf))
+	buf = dsputils.ZeroPadF(buf, 200+len(buf))
+	filtered := ToReal(fft.Convolve(dsputils.ToComplex(buf), dsputils.ToComplex(kernel)))
+
+	buf = filtered
+	kernel = dsputils.ZeroPadF(windowSincKernelHp(200, 7.0/441), 200+len(buf))
+	buf = dsputils.ZeroPadF(buf, 200+len(buf))
+	filtered = ToReal(fft.Convolve(dsputils.ToComplex(buf), dsputils.ToComplex(kernel)))
+	drawChart("filtered.html", filtered)
+
+	cut := filtered[27400:38360]
+	drawCut(cut)
+}
+
+func drawCut(cut []float64) {
+	drawChart("cut.html", cut)
+
+	for i := 0; i < len(cut)/441; i++ {
+		fileName := fmt.Sprintf("%d.html", i)
+		segment := cut[i*441 : (i+1)*441]
+		hann(segment)
+		drawChart(fileName, segment)
+		spectrum := ToAbs(fft.FFTReal(segment))
+		fileName = fmt.Sprintf("s%d.html", i)
+		mx := 0
+		for j := 0; j < len(spectrum); j++ {
+			if spectrum[mx] < spectrum[j] {
+				mx = j
+			}
+		}
+		fmt.Printf("%v ", mx)
+		drawChart(fileName, spectrum)
+	}
+	fmt.Printf("\n")
+
+}
+
+func measureIntervals(s []bool) (es []Element) {
+	es = make([]Element, 1)
+	es[0].s = s[0]
+	es[0].d = 1
+	for i := 1; i < len(s); i++ {
+		if s[i] == es[len(es)-1].s {
+			es[len(es)-1].d++
+		} else {
+			es = append(es, Element{1, s[i]})
+		}
+	}
+	return
 }
