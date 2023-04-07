@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"flag"
 	"fmt"
 	"math"
 	"math/cmplx"
@@ -13,6 +12,8 @@ import (
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/mjibson/go-dsp/dsputils"
 	"github.com/mjibson/go-dsp/fft"
+	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 var filter []complex128
@@ -33,17 +34,36 @@ func init() {
 // Import raw data using audacity with the specified parameters
 func main() {
 
-	recordFlag := flag.Bool("record", false, "Record audio file and print to stdout")
+	app := &cli.App{
+		Name:  "cw-server",
+		Usage: "Listen and decode cw",
+		Commands: []*cli.Command{
+			{
+				Name:    "record",
+				Aliases: []string{"r"},
+				Usage:   "Record audio file",
+				Action: func(cCtx *cli.Context) error {
+					record()
+					return nil
+				},
+			},
+			{
+				Name:    "detect",
+				Aliases: []string{"d"},
+				Usage:   "Detect morse code in a file",
+				Action: func(cCtx *cli.Context) error {
+					_, _, values, _ := processFile("short.wav")
+					es := measureIntervals(values)
+					s := detectCode(es)
+					fmt.Printf("String: %s\n", s)
+					return nil
+				},
+			},
+		},
+	}
 
-	flag.Parse()
-
-	if *recordFlag {
-		record()
-	} else {
-		_, _, values, _ := processFile("short.wav")
-		es := measureIntervals(values)
-		s := detectCode(es)
-		fmt.Printf("String: %s\n", s)
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
 	}
 }
 
