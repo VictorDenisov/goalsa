@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"math"
 	"math/cmplx"
@@ -31,13 +32,19 @@ func init() {
 //
 // Import raw data using audacity with the specified parameters
 func main() {
-	_, _, values, _ := processFile("short.wav")
-	es := measureIntervals(values)
-	s := detectCode(es)
-	fmt.Printf("String: %s\n", s)
 
-	return
+	recordFlag := flag.Bool("record", false, "Record audio file and print to stdout")
 
+	flag.Parse()
+
+	if *recordFlag {
+		record()
+	} else {
+		_, _, values, _ := processFile("short.wav")
+		es := measureIntervals(values)
+		s := detectCode(es)
+		fmt.Printf("String: %s\n", s)
+	}
 }
 
 func ToAbs(a []complex128) []float64 {
