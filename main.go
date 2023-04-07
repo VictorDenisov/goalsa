@@ -81,14 +81,8 @@ func drawCut(cut []float64) {
 //
 // Import raw data using audacity with the specified parameters
 func main() {
-	_, res, _ := processFile("short.wav")
-
-	cut := res[27400:38360]
-	drawCut(cut)
-
-	return
-
-	//testFft()
+	_, _, values, _ := processFile("short.wav")
+	fmt.Printf("%v\n", values)
 
 	return
 
@@ -279,19 +273,17 @@ func hann(y []float64) {
 	}
 }
 
-func processFile(name string) (sig []float64, res []float64, err error) {
+func processFile(name string) (sig []float64, res []float64, values []byte, err error) {
 
-	//filter := NewHpFilter(200, 2.0/441, 441)
+	values = make([]byte, 0)
+
 	filter := NewBpFilter(200, 7.0/441, 30.0/441, 441)
-
-	//filter := NewHpFilter(200, 2.0/441, 441)
 
 	file, err := os.Open(name)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	defer file.Close()
-	//pieceNum := 0
 	sig = make([]float64, 0)
 	res = make([]float64, 0)
 	for pieceNum := 0; ; pieceNum++ {
@@ -300,7 +292,7 @@ func processFile(name string) (sig []float64, res []float64, err error) {
 			var v int16
 			err := binary.Read(file, binary.LittleEndian, &v)
 			if err != nil {
-				return sig, res, nil
+				return sig, res, values, nil
 			}
 			buf[i] = float64(v)
 		}
@@ -309,47 +301,17 @@ func processFile(name string) (sig []float64, res []float64, err error) {
 		res = append(res, buf...)
 		hann(buf)
 		rawSpectrum := ToAbs(fft.FFTReal(buf))
-		//fileName := fmt.Sprintf("%d.html", pieceNum)
-		//drawChart(fileName, rawSpectrum[0:len(rawSpectrum)/2])
 
 		spectrum := newSpectrum(rawSpectrum)
 		sort.Sort(sort.Reverse(spectrum))
 		if spectrum.units[0].magn-spectrum.units[1].magn > 50000 {
-			fmt.Printf("%v ", 1)
+			values = append(values, 1)
 		} else {
-			fmt.Printf("%v ", 0)
+			values = append(values, 0)
 		}
-		/*
-					fileName := fmt.Sprintf("%d.html", pieceNum)
-					drawChart(fileName, buf)
-
-					fileName = fmt.Sprintf("%d_filtered.html", pieceNum)
-					drawChart(fileName, buf)
-
-					spectrum := fft.FFTReal(buf)
-					sabs := ToAbs(spectrum)
-
-					fileName = fmt.Sprintf("%d_sabs.html", pieceNum)
-					drawChart(fileName, sabs)
-					var mx float64 = -1000000000
-					for i := 0; i < len(sabs); i++ {
-						if sabs[i] > mx {
-							mx = sabs[i]
-						}
-					}
-
-				if mx/5 > 20000 {
-					res = append(res, 1)
-				} else {
-					res = append(res, 0)
-				}
-			//fmt.Printf("%v ", math.Round(mx/5))
-			pieceNum++
-		*/
 
 	}
-	fmt.Printf("\n")
-	return sig, res, nil
+	return sig, res, values, nil
 }
 
 func rng(n int) []int {
@@ -442,25 +404,4 @@ func testFft() {
 		fmt.Printf("%0.5f ", result[i])
 	}
 	fmt.Printf("\n")
-	/*
-			result := fft.Convolve(filter, data)
-			fmt.Printf("result: \n")
-			for i := 0; i < len(result); i++ {
-				fmt.Printf("%0.5f ", cmplx.Abs(result[i]))
-			}
-			fmt.Printf("\n")
-
-		for i := 0; i < len(result); i++ {
-			/*
-				if imag(result[i]) < 0.00001 {
-					fmt.Printf("%0.5d ", real(result[i]))
-				} else {
-					fmt.Printf("%0.5d ", real(result[i]))
-				}
-	*/
-	/*
-			fmt.Printf("(%0.5f, %0.5f) ", real(result[i]), imag(result[i]))
-		}
-	*/
-
 }
