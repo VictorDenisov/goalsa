@@ -70,6 +70,20 @@ func drawCut(cut []float64) {
 
 }
 
+func measureIntervals(s []bool) (es []Element) {
+	es = make([]Element, 1)
+	es[0].s = s[0]
+	es[0].d = 1
+	for i := 1; i < len(s); i++ {
+		if s[i] == es[len(es)-1].s {
+			es[len(es)-1].d++
+		} else {
+			es = append(es, Element{1, s[i]})
+		}
+	}
+	return
+}
+
 // This code captures standard input
 // Redirect this files standard output into a file.
 // Play the file using the following command:
@@ -82,7 +96,9 @@ func drawCut(cut []float64) {
 // Import raw data using audacity with the specified parameters
 func main() {
 	_, _, values, _ := processFile("short.wav")
-	fmt.Printf("%v\n", values)
+	es := measureIntervals(values)
+	s := detectCode(es)
+	fmt.Printf("String: %s\n", s)
 
 	return
 
@@ -273,9 +289,9 @@ func hann(y []float64) {
 	}
 }
 
-func processFile(name string) (sig []float64, res []float64, values []byte, err error) {
+func processFile(name string) (sig []float64, res []float64, values []bool, err error) {
 
-	values = make([]byte, 0)
+	values = make([]bool, 0)
 
 	filter := NewBpFilter(200, 7.0/441, 30.0/441, 441)
 
@@ -305,9 +321,9 @@ func processFile(name string) (sig []float64, res []float64, values []byte, err 
 		spectrum := newSpectrum(rawSpectrum)
 		sort.Sort(sort.Reverse(spectrum))
 		if spectrum.units[0].magn-spectrum.units[1].magn > 50000 {
-			values = append(values, 1)
+			values = append(values, true)
 		} else {
-			values = append(values, 0)
+			values = append(values, false)
 		}
 
 	}
