@@ -34,17 +34,29 @@ func init() {
 // Import raw data using audacity with the specified parameters
 func main() {
 
+	var fileName string
+
 	app := &cli.App{
-		Name:  "cw-server",
-		Usage: "Listen and decode cw",
+		Name:                 "cw-server",
+		Usage:                "Listen and decode cw",
+		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{
 				Name:    "record",
 				Aliases: []string{"r"},
 				Usage:   "Record audio file",
 				Action: func(cCtx *cli.Context) error {
+					fmt.Printf("Handling file name: %s\n", fileName)
 					record()
 					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "file",
+						Aliases:     []string{"f"},
+						Usage:       "File for operations with files",
+						Destination: &fileName,
+					},
 				},
 			},
 			{
@@ -52,11 +64,20 @@ func main() {
 				Aliases: []string{"d"},
 				Usage:   "Detect morse code in a file",
 				Action: func(cCtx *cli.Context) error {
+					fmt.Printf("Handling file name: %s\n", fileName)
 					_, _, values, _ := processFile("short.wav")
 					es := measureIntervals(values)
 					s := detectCode(es)
 					fmt.Printf("String: %s\n", s)
 					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "file",
+						Aliases:     []string{"f"},
+						Usage:       "File for operations with files",
+						Destination: &fileName,
+					},
 				},
 			},
 		},
