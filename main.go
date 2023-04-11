@@ -47,7 +47,7 @@ func main() {
 				Usage:   "Record audio file",
 				Action: func(cCtx *cli.Context) error {
 					fmt.Printf("Handling file name: %s\n", fileName)
-					record()
+					record(fileName)
 					return nil
 				},
 				Flags: []cli.Flag{

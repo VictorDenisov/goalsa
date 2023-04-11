@@ -15,7 +15,7 @@ import (
 */
 import "C"
 
-func record() {
+func record(fileName string) {
 	var handle *C.snd_pcm_t
 	var rc C.int
 
@@ -87,7 +87,7 @@ func record() {
 	}
 	var loops C.long = 10_000_000 / C.long(val)
 
-	out, err := os.Create("output.raw")
+	out, err := os.Create(fileName)
 	if err != nil {
 		log.Fatalf("Couldn't create output file: %v", err)
 	}
