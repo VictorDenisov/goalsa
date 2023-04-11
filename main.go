@@ -56,6 +56,7 @@ func main() {
 						Aliases:     []string{"f"},
 						Usage:       "File for operations with files",
 						Destination: &fileName,
+						Required:    true,
 					},
 				},
 			},
@@ -65,7 +66,7 @@ func main() {
 				Usage:   "Detect morse code in a file",
 				Action: func(cCtx *cli.Context) error {
 					fmt.Printf("Handling file name: %s\n", fileName)
-					_, _, values, _ := processFile("short.wav")
+					_, _, values, _ := processFile(fileName)
 					es := measureIntervals(values)
 					s := detectCode(es)
 					fmt.Printf("String: %s\n", s)
@@ -77,6 +78,7 @@ func main() {
 						Aliases:     []string{"f"},
 						Usage:       "File for operations with files",
 						Destination: &fileName,
+						Required:    true,
 					},
 				},
 			},
