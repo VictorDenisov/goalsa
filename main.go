@@ -66,7 +66,9 @@ func main() {
 				Usage:   "Detect morse code in a file",
 				Action: func(cCtx *cli.Context) error {
 					fmt.Printf("Handling file name: %s\n", fileName)
-					_, _, values, _ := processFile(fileName)
+					_, res, values, _ := processFile(fileName)
+					fmt.Printf("Values: %v\n", values)
+					drawChart("filtered.html", res[70000:180000])
 					es := measureIntervals(values)
 					s := detectCode(es)
 					fmt.Printf("String: %s\n", s)
@@ -208,10 +210,14 @@ func processFile(name string) (sig []float64, res []float64, values []bool, err 
 		res = append(res, buf...)
 		hann(buf)
 		rawSpectrum := ToAbs(fft.FFTReal(buf))
+		if pieceNum > 158 && pieceNum < 258 {
+			fn := fmt.Sprintf("%d.html", pieceNum)
+			drawChart(fn, rawSpectrum)
+		}
 
 		spectrum := newSpectrum(rawSpectrum)
 		sort.Sort(sort.Reverse(spectrum))
-		if spectrum.units[0].magn-spectrum.units[1].magn > 50000 {
+		if spectrum.units[0].magn > 10000 {
 			values = append(values, true)
 		} else {
 			values = append(values, false)
