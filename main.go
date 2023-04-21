@@ -6,7 +6,6 @@ import (
 	"math"
 	"math/cmplx"
 	"os"
-	"sort"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
@@ -67,7 +66,7 @@ func main() {
 				Action: func(cCtx *cli.Context) error {
 					fmt.Printf("Handling file name: %s\n", fileName)
 					_, res, values, _ := processFile(fileName)
-					fmt.Printf("Values: %v\n", values)
+					printBoolArray(values)
 					drawChart("filtered.html", res[70000:180000])
 					es := measureIntervals(values)
 					s := detectCode(es)
@@ -90,6 +89,17 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func printBoolArray(bs []bool) {
+	for i := 0; i < len(bs); i++ {
+		if bs[i] {
+			fmt.Printf("1 ")
+		} else {
+			fmt.Printf("0 ")
+		}
+	}
+	fmt.Printf("\n")
 }
 
 func ToAbs(a []complex128) []float64 {
@@ -195,13 +205,15 @@ func processFile(name string) (sig []float64, res []float64, values []bool, err 
 	defer file.Close()
 	sig = make([]float64, 0)
 	res = make([]float64, 0)
+
+	spectra := make([][]float64, 0)
 	for pieceNum := 0; ; pieceNum++ {
 		buf := make([]float64, 441)
 		for i := 0; i < 441; i++ {
 			var v int16
 			err := binary.Read(file, binary.LittleEndian, &v)
 			if err != nil {
-				return sig, res, values, nil
+				goto exit
 			}
 			buf[i] = float64(v)
 		}
@@ -210,19 +222,29 @@ func processFile(name string) (sig []float64, res []float64, values []bool, err 
 		res = append(res, buf...)
 		hann(buf)
 		rawSpectrum := ToAbs(fft.FFTReal(buf))
+		spectra = append(spectra, rawSpectrum[0:222])
 		if pieceNum > 158 && pieceNum < 258 {
 			fn := fmt.Sprintf("%d.html", pieceNum)
 			drawChart(fn, rawSpectrum)
 		}
 
-		spectrum := newSpectrum(rawSpectrum)
-		sort.Sort(sort.Reverse(spectrum))
-		if spectrum.units[0].magn > 10000 {
-			values = append(values, true)
-		} else {
-			values = append(values, false)
-		}
+		/*
+			spectrum := newSpectrum(rawSpectrum)
+			sort.Sort(sort.Reverse(spectrum))
+			if spectrum.units[0].magn > 10000 {
+				values = append(values, true)
+			} else {
+				values = append(values, false)
+			}
+		*/
 
+	}
+exit:
+	sd := classifySegments(spectra[159:257])
+	drawChart("signalMean.html", sd.signal)
+	drawChart("noiseMean.html", sd.noise)
+	for i := 0; i < len(spectra); i++ {
+		values = append(values, sd.isSignal(spectra[i]))
 	}
 	return sig, res, values, nil
 }

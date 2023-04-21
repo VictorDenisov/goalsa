@@ -5,6 +5,10 @@ type SignalDetector struct {
 	noise  []float64
 }
 
+func (sd *SignalDetector) isSignal(sample []float64) bool {
+	return distSq(sample, sd.signal) < distSq(sample, sd.noise)
+}
+
 func classifySegments(segments [][]float64) (sd *SignalDetector) {
 
 	m := len(segments[0])
