@@ -21,6 +21,10 @@ func init() {
 	filter = dsputils.ZeroPad([]complex128{5}, 5)
 }
 
+type Range struct {
+	lb, ub int64
+}
+
 // This code captures standard input
 // Redirect this files standard output into a file.
 // Play the file using the following command:
@@ -34,6 +38,7 @@ func init() {
 func main() {
 
 	var fileName string
+	var lb, ub int64
 
 	app := &cli.App{
 		Name:                 "cw-server",
@@ -65,7 +70,7 @@ func main() {
 				Usage:   "Detect morse code in a file",
 				Action: func(cCtx *cli.Context) error {
 					fmt.Printf("Handling file name: %s\n", fileName)
-					_, res, values, _ := processFile(fileName)
+					_, res, values, _ := processFile(fileName, &Range{lb, ub})
 					printBoolArray(values)
 					drawChart("filtered.html", res[70000:180000])
 					es := measureIntervals(values)
@@ -80,6 +85,20 @@ func main() {
 						Usage:       "File for operations with files",
 						Destination: &fileName,
 						Required:    true,
+					},
+					&cli.Int64Flag{
+						Name:        "lower_bound",
+						Aliases:     []string{"lb"},
+						Usage:       "Left boundary of segments for drawing",
+						Destination: &lb,
+						Required:    false,
+					},
+					&cli.Int64Flag{
+						Name:        "upper_bound",
+						Aliases:     []string{"ub"},
+						Usage:       "Right boundary of segments for drawing",
+						Destination: &ub,
+						Required:    false,
 					},
 				},
 			},
@@ -192,7 +211,7 @@ func hann(y []float64) {
 	}
 }
 
-func processFile(name string) (sig []float64, res []float64, values []bool, err error) {
+func processFile(name string, rng *Range) (sig []float64, res []float64, values []bool, err error) {
 
 	values = make([]bool, 0)
 
@@ -207,7 +226,7 @@ func processFile(name string) (sig []float64, res []float64, values []bool, err 
 	res = make([]float64, 0)
 
 	spectra := make([][]float64, 0)
-	for pieceNum := 0; ; pieceNum++ {
+	for pieceNum := int64(0); ; pieceNum++ {
 		buf := make([]float64, 441)
 		for i := 0; i < 441; i++ {
 			var v int16
@@ -223,20 +242,10 @@ func processFile(name string) (sig []float64, res []float64, values []bool, err 
 		hann(buf)
 		rawSpectrum := ToAbs(fft.FFTReal(buf))
 		spectra = append(spectra, rawSpectrum[0:222])
-		if pieceNum > 158 && pieceNum < 258 {
+		if pieceNum > rng.lb && pieceNum < rng.ub {
 			fn := fmt.Sprintf("%d.html", pieceNum)
 			drawChart(fn, rawSpectrum)
 		}
-
-		/*
-			spectrum := newSpectrum(rawSpectrum)
-			sort.Sort(sort.Reverse(spectrum))
-			if spectrum.units[0].magn > 10000 {
-				values = append(values, true)
-			} else {
-				values = append(values, false)
-			}
-		*/
 
 	}
 exit:
