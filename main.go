@@ -39,6 +39,7 @@ func main() {
 
 	var fileName string
 	var lb, ub int64
+	var lowerClassificationBoundary, upperClassificationBoundary int64
 
 	app := &cli.App{
 		Name:                 "cw-server",
@@ -70,7 +71,11 @@ func main() {
 				Usage:   "Detect morse code in a file",
 				Action: func(cCtx *cli.Context) error {
 					fmt.Printf("Handling file name: %s\n", fileName)
-					_, res, values, _ := processFile(fileName, &Range{lb, ub})
+					_, res, values, _ := processFile(
+						fileName,
+						&Range{lb, ub},
+						&Range{lowerClassificationBoundary, upperClassificationBoundary},
+					)
 					printBoolArray(values)
 					drawChart("filtered.html", res[70000:180000])
 					es := measureIntervals(values)
@@ -98,6 +103,20 @@ func main() {
 						Aliases:     []string{"ub"},
 						Usage:       "Right boundary of segments for drawing",
 						Destination: &ub,
+						Required:    false,
+					},
+					&cli.Int64Flag{
+						Name:        "lower_class_bound",
+						Aliases:     []string{"lc"},
+						Usage:       "Left boundary of segments for classifying signal",
+						Destination: &lowerClassificationBoundary,
+						Required:    false,
+					},
+					&cli.Int64Flag{
+						Name:        "upper_class_bound",
+						Aliases:     []string{"uc"},
+						Usage:       "Right boundary of segments for classifying signal",
+						Destination: &upperClassificationBoundary,
 						Required:    false,
 					},
 				},
@@ -211,7 +230,7 @@ func hann(y []float64) {
 	}
 }
 
-func processFile(name string, rng *Range) (sig []float64, res []float64, values []bool, err error) {
+func processFile(name string, rng *Range, classRng *Range) (sig []float64, res []float64, values []bool, err error) {
 
 	values = make([]bool, 0)
 
@@ -249,7 +268,12 @@ func processFile(name string, rng *Range) (sig []float64, res []float64, values 
 
 	}
 exit:
-	sd := classifySegments(spectra[159:257])
+	var sd *SignalDetector
+	if classRng.lb == 0 && classRng.ub == 0 {
+		sd = classifySegments(spectra)
+	} else {
+		sd = classifySegments(spectra[classRng.lb:classRng.ub])
+	}
 	drawChart("signalMean.html", sd.signal)
 	drawChart("noiseMean.html", sd.noise)
 	for i := 0; i < len(spectra); i++ {
