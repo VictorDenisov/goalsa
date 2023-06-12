@@ -19,11 +19,11 @@ func classifySegments(segments [][]float64) (sd *SignalDetector) {
 	mx := make([]float64, n)
 
 	for i := 0; i < n; i++ {
-		mx[i] = segmentMax(segments[i])
+		mx[i], _ = segmentMax(segments[i])
 	}
 
-	allMin := segmentMin(mx)
-	allMax := segmentMax(mx)
+	allMin, _ := segmentMin(mx)
+	allMax, _ := segmentMax(mx)
 
 	middle := (allMin + allMax) / 2
 
@@ -89,22 +89,25 @@ func div(x []float64, v float64) {
 	}
 }
 
-func segmentMin(seg []float64) float64 {
-	mx := seg[0]
+func segmentMin(seg []float64) (mx float64, id int) {
+	mx = seg[0]
+	id = 0
 	for i := 1; i < len(seg); i++ {
 		if seg[i] < mx {
 			mx = seg[i]
+			id = i
 		}
 	}
-	return mx
+	return
 }
 
-func segmentMax(seg []float64) float64 {
-	mx := seg[0]
+func segmentMax(seg []float64) (mx float64, id int) {
+	mx = seg[0]
+	id = 0
 	for i := 1; i < len(seg); i++ {
 		if seg[i] > mx {
 			mx = seg[i]
 		}
 	}
-	return mx
+	return mx, id
 }
