@@ -1,5 +1,9 @@
 package main
 
+import (
+	"math"
+)
+
 type SignalDetector struct {
 	signal []float64
 	noise  []float64
@@ -65,6 +69,103 @@ func classifySegments(segments [][]float64) (sd *SignalDetector) {
 
 	sd = &SignalDetector{signalMean, noiseMean}
 	return sd
+}
+
+func expectationMaximizationClassifySegments(segments [][]float64) (sd *SignalDetector) {
+
+	sq2pi := math.Sqrt(2 * math.Pi)
+	m := len(segments[0])
+	n := len(segments)
+
+	r := make([][]float64, n)
+	for i := 0; i < n; i++ {
+		r[i] = make([]float64, 2)
+	}
+
+	mx := make([]float64, n) // Maximum in every segment
+
+	for i := 0; i < n; i++ {
+		mx[i], _ = segmentMax(segments[i])
+	}
+
+	_, minId := segmentMin(mx)
+	_, maxId := segmentMax(mx)
+
+	const nCentroids = 2
+	centroids := make([][]float64, nCentroids)
+	for i := 0; i < nCentroids; i++ {
+		centroids[i] = make([]float64, m)
+	}
+	copy(centroids[0], segments[minId])
+	copy(centroids[1], segments[maxId])
+	sigma := make([]float64, nCentroids)
+	for i := 0; i < nCentroids; i++ {
+		sigma[i] = 0.5
+	}
+	pi := make([]float64, nCentroids)
+	for i := 0; i < n; i++ {
+		sumR := float64(0)
+		for k := 0; k < nCentroids; k++ {
+			r[i][k] = pi[k] * math.Exp(-dist(centroids[k], segments[i])/sigma[k]/sigma[k]) / math.Pow(sq2pi*sigma[k], float64(m))
+			sumR = r[i][k]
+		}
+
+		for k := 0; k < nCentroids; k++ {
+			r[i][k] /= sumR
+		}
+	}
+	R := make([]float64, nCentroids)
+	totalR := float64(0)
+	for k := 0; k < nCentroids; k++ {
+		var s []float64
+		for j := 0; j < n; j++ {
+			s = plus(s, mult(r[j][k], segments[j]))
+			R[k] += r[j][k]
+		}
+		centroids[k] = divN(s, R[k])
+		sigma[k] = 0
+		for j := 0; j < n; j++ {
+			sigma[k] += r[j][k] * dist(segments[k], centroids[k])
+		}
+		sigma[k] /= float64(m) * R[k]
+		sigma[k] = math.Sqrt(sigma[k])
+		totalR += R[k]
+	}
+	for k := 0; k < nCentroids; k++ {
+		pi[k] = R[k] / totalR
+	}
+	return nil
+}
+
+func plus(a, b []float64) (r []float64) {
+	r = make([]float64, len(b))
+	for i := 0; i < len(b); i++ {
+		r[i] = a[i] + b[i]
+	}
+	return
+}
+
+func divN(a []float64, b float64) (r []float64) {
+	r = make([]float64, len(a))
+	for i := 0; i < len(a); i++ {
+		r[i] = a[i] / b
+	}
+	return
+}
+
+func mult(a float64, b []float64) (r []float64) {
+	r = make([]float64, len(b))
+	for i := 0; i < len(b); i++ {
+		r[i] = b[i] * a
+	}
+	return
+}
+
+func dist(a, b []float64) (r float64) {
+	for i := 0; i < len(a); i++ {
+		r += (a[i] - b[i]) * (a[i] - b[i])
+	}
+	return r
 }
 
 func distSq(x, y []float64) float64 {
