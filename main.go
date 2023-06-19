@@ -268,14 +268,28 @@ func processFile(name string, rng *Range, classRng *Range) (sig []float64, res [
 
 	}
 exit:
-	var sd *SignalDetector
+	/*
+		var sd *KMeansSignalDetector
+		if classRng.lb == 0 && classRng.ub == 0 {
+			sd = classifySegments(spectra)
+		} else {
+			sd = classifySegments(spectra[classRng.lb:classRng.ub])
+		}
+		drawChart("signalMean.html", sd.signal)
+		drawChart("noiseMean.html", sd.noise)
+		for i := 0; i < len(spectra); i++ {
+			values = append(values, sd.isSignal(spectra[i]))
+		}
+		return sig, res, values, nil
+	*/
+	var sd *EMSignalDetector
 	if classRng.lb == 0 && classRng.ub == 0 {
-		sd = classifySegments(spectra)
+		sd = expectationMaximizationClassifySegments(spectra)
 	} else {
-		sd = classifySegments(spectra[classRng.lb:classRng.ub])
+		sd = expectationMaximizationClassifySegments(spectra[classRng.lb:classRng.ub])
 	}
-	drawChart("signalMean.html", sd.signal)
-	drawChart("noiseMean.html", sd.noise)
+	drawChart("signalMean.html", sd.centroids[0])
+	drawChart("noiseMean.html", sd.centroids[1])
 	for i := 0; i < len(spectra); i++ {
 		values = append(values, sd.isSignal(spectra[i]))
 	}

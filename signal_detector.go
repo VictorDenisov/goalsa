@@ -1,19 +1,31 @@
 package main
 
 import (
+	"fmt"
 	"math"
 )
 
-type SignalDetector struct {
+type KMeansSignalDetector struct {
 	signal []float64
 	noise  []float64
 }
 
-func (sd *SignalDetector) isSignal(sample []float64) bool {
+func (sd *KMeansSignalDetector) isSignal(sample []float64) bool {
 	return distSq(sample, sd.signal) < distSq(sample, sd.noise)
 }
 
-func classifySegments(segments [][]float64) (sd *SignalDetector) {
+type EMSignalDetector struct {
+	r         [][]float64
+	centroids [][]float64
+	sigma     []float64
+	pi        []float64
+}
+
+func (sd *EMSignalDetector) isSignal(sample []float64) bool {
+	return distSq(sample, sd.centroids[0]) < distSq(sample, sd.centroids[1])
+}
+
+func classifySegments(segments [][]float64) (sd *KMeansSignalDetector) {
 
 	m := len(segments[0])
 	n := len(segments)
@@ -67,11 +79,11 @@ func classifySegments(segments [][]float64) (sd *SignalDetector) {
 		}
 	}
 
-	sd = &SignalDetector{signalMean, noiseMean}
+	sd = &KMeansSignalDetector{signalMean, noiseMean}
 	return sd
 }
 
-func expectationMaximizationClassifySegments(segments [][]float64) (sd *SignalDetector) {
+func expectationMaximizationClassifySegments(segments [][]float64) (sd *EMSignalDetector) {
 
 	sq2pi := math.Sqrt(2 * math.Pi)
 	m := len(segments[0])
@@ -98,26 +110,38 @@ func expectationMaximizationClassifySegments(segments [][]float64) (sd *SignalDe
 	}
 	copy(centroids[0], segments[minId])
 	copy(centroids[1], segments[maxId])
+	drawChart("signalMean0.html", centroids[0])
+	drawChart("noiseMean0.html", centroids[1])
 	sigma := make([]float64, nCentroids)
 	for i := 0; i < nCentroids; i++ {
-		sigma[i] = 0.5
+		sigma[i] = 100
 	}
 	pi := make([]float64, nCentroids)
+	for i := 0; i < nCentroids; i++ {
+		pi[i] = 1
+	}
 	for i := 0; i < n; i++ {
-		sumR := float64(0)
+		//sumR := float64(0)
+		fmt.Printf("dist: ")
 		for k := 0; k < nCentroids; k++ {
+			v := pi[k] * math.Exp(-dist(centroids[k], segments[i])/sigma[k]/sigma[k])
+			v = float64(m) //sq2pi * sigma[k]
+			fmt.Printf("%f ", v)
 			r[i][k] = pi[k] * math.Exp(-dist(centroids[k], segments[i])/sigma[k]/sigma[k]) / math.Pow(sq2pi*sigma[k], float64(m))
-			sumR = r[i][k]
+			//sumR = r[i][k]
 		}
+		fmt.Printf("\n")
 
 		for k := 0; k < nCentroids; k++ {
-			r[i][k] /= sumR
+			//r[i][k] /= sumR
+			fmt.Printf("%f ", r[i][k])
 		}
+		fmt.Printf("\n")
 	}
 	R := make([]float64, nCentroids)
 	totalR := float64(0)
 	for k := 0; k < nCentroids; k++ {
-		var s []float64
+		s := make([]float64, m)
 		for j := 0; j < n; j++ {
 			s = plus(s, mult(r[j][k], segments[j]))
 			R[k] += r[j][k]
@@ -134,7 +158,7 @@ func expectationMaximizationClassifySegments(segments [][]float64) (sd *SignalDe
 	for k := 0; k < nCentroids; k++ {
 		pi[k] = R[k] / totalR
 	}
-	return nil
+	return &EMSignalDetector{r, centroids, sigma, pi}
 }
 
 func plus(a, b []float64) (r []float64) {
@@ -165,7 +189,7 @@ func dist(a, b []float64) (r float64) {
 	for i := 0; i < len(a); i++ {
 		r += (a[i] - b[i]) * (a[i] - b[i])
 	}
-	return r
+	return math.Sqrt(r)
 }
 
 func distSq(x, y []float64) float64 {
