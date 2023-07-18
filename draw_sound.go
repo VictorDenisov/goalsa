@@ -34,9 +34,11 @@ func drawSound(audioFile string) {
 				running = false
 				break
 			case *sdl.WindowEvent:
-				width := e.Data1
-				height := e.Data2
-				fmt.Printf("Current window size: %d, %d\n", width, height)
+				if e.Event == sdl.WINDOWEVENT_RESIZED {
+					width := e.Data1
+					height := e.Data2
+					fmt.Printf("Current window size: %d, %d\n", width, height)
+				}
 			}
 			renderer.SetDrawColor(242, 242, 242, 255)
 			renderer.Clear()
