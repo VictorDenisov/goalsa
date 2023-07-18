@@ -66,6 +66,24 @@ func main() {
 				},
 			},
 			{
+				Name:    "visualize",
+				Aliases: []string{"v"},
+				Action: func(cCtx *cli.Context) error {
+					fmt.Printf("Handling file name: %s\n", fileName)
+					drawSound(fileName)
+					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "file",
+						Aliases:     []string{"f"},
+						Usage:       "File to visualize",
+						Destination: &fileName,
+						Required:    true,
+					},
+				},
+			},
+			{
 				Name:    "detect",
 				Aliases: []string{"d"},
 				Usage:   "Detect morse code in a file",
