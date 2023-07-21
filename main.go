@@ -279,7 +279,7 @@ func processFile(name string, rng *Range, classRng *Range) (sig []float64, res [
 		hann(buf)
 		rawSpectrum := ToAbs(fft.FFTReal(buf))
 		spectra = append(spectra, rawSpectrum[0:222])
-		if pieceNum > rng.lb && pieceNum < rng.ub {
+		if rng != nil && pieceNum > rng.lb && pieceNum < rng.ub {
 			fn := fmt.Sprintf("%d.html", pieceNum)
 			drawChart(fn, rawSpectrum)
 		}
@@ -301,7 +301,7 @@ exit:
 		return sig, res, values, nil
 	*/
 	var sd *EMSignalDetector
-	if classRng.lb == 0 && classRng.ub == 0 {
+	if classRng == nil || (classRng.lb == 0 && classRng.ub == 0) {
 		sd = expectationMaximizationClassifySegments(spectra)
 	} else {
 		sd = expectationMaximizationClassifySegments(spectra[classRng.lb:classRng.ub])

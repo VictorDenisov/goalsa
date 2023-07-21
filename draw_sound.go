@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"os"
 
 	"github.com/veandco/go-sdl2/sdl"
@@ -21,14 +22,21 @@ func drawSound(audioFile string) {
 	var mousePos sdl.Point
 	var clickOffset sdl.Point
 
-	buf, err := readFileData(audioFile)
-	if err != nil {
-		panic(err)
-	}
-	mx := int16(0)
+	_, buf, _, _ := processFile(
+		audioFile,
+		nil,
+		nil,
+	)
+	/*
+		buf, err := readFileData(audioFile)
+		if err != nil {
+			panic(err)
+		}
+	*/
+	mx := float64(0)
 	for i := 0; i < len(buf); i++ {
-		if abs16(buf[i]) > mx {
-			mx = abs16(buf[i])
+		if math.Abs(buf[i]) > mx {
+			mx = math.Abs(buf[i])
 		}
 	}
 	var startOffset, lastOffset int32
