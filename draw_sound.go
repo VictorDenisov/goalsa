@@ -1,12 +1,38 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
+	"os"
 
 	"github.com/veandco/go-sdl2/sdl"
 )
 
+type WindowSize struct {
+	Width, Height int32
+}
+
 func drawSound(audioFile string) {
+
+	var windowSize WindowSize
+	const barWidth = 1
+
+	var leftMouseButtonDown bool
+	var mousePos sdl.Point
+	var clickOffset sdl.Point
+
+	buf, err := readFileData(audioFile)
+	if err != nil {
+		panic(err)
+	}
+	mx := int16(0)
+	for i := 0; i < len(buf); i++ {
+		if abs16(buf[i]) > mx {
+			mx = abs16(buf[i])
+		}
+	}
+	var startOffset, lastOffset int32
+
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
 	}
@@ -35,16 +61,69 @@ func drawSound(audioFile string) {
 				break
 			case *sdl.WindowEvent:
 				if e.Event == sdl.WINDOWEVENT_RESIZED {
-					width := e.Data1
-					height := e.Data2
-					fmt.Printf("Current window size: %d, %d\n", width, height)
+					windowSize.Width = e.Data1
+					windowSize.Height = e.Data2
+					fmt.Printf("Current window size: %v\n", windowSize)
+				}
+			case *sdl.MouseMotionEvent:
+				mousePos = sdl.Point{e.X, e.Y}
+				if leftMouseButtonDown {
+					startOffset = lastOffset - (mousePos.X-clickOffset.X)/barWidth
+					if startOffset < 0 {
+						startOffset = 0
+					}
+				}
+			case *sdl.MouseButtonEvent:
+				if e.Type == sdl.MOUSEBUTTONUP {
+					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
+						leftMouseButtonDown = false
+						lastOffset = lastOffset - (mousePos.X-clickOffset.X)/barWidth
+					}
+				} else if e.Type == sdl.MOUSEBUTTONDOWN {
+					if !leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
+						leftMouseButtonDown = true
+						clickOffset.X = mousePos.X
+						clickOffset.Y = mousePos.Y
+					}
 				}
 			}
 			renderer.SetDrawColor(242, 242, 242, 255)
 			renderer.Clear()
+
+			renderer.SetDrawColor(0, 255, 0, 255)
+			for i := int32(0); i < windowSize.Width/(2*barWidth); i++ {
+				h := int32(float64(windowSize.Height) / 4.0 * float64(buf[i+startOffset]) / float64(mx))
+				rect := &sdl.Rect{int32(i) * barWidth * 2, windowSize.Height/2 - h, barWidth, h}
+				renderer.FillRect(rect)
+			}
 			renderer.Present()
 
 		}
 	}
 	sdl.Quit()
+}
+
+func readFileData(fileName string) ([]int16, error) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	buf := make([]int16, 0)
+	for {
+		var v int16
+		err := binary.Read(file, binary.LittleEndian, &v)
+		if err != nil {
+			break
+		}
+		buf = append(buf, v)
+	}
+	return buf, nil
+}
+
+func abs16(v int16) int16 {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
