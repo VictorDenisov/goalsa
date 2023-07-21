@@ -22,11 +22,16 @@ func drawSound(audioFile string) {
 	var mousePos sdl.Point
 	var clickOffset sdl.Point
 
-	_, buf, _, _ := processFile(
+	_, res, _, _ := processFile(
 		audioFile,
 		nil,
 		nil,
 	)
+	buf := shrinkSignal(res)
+	buf = shrinkSignal(buf)
+	buf = shrinkSignal(buf)
+	buf = shrinkSignal(buf)
+	buf = shrinkSignal(buf)
 	/*
 		buf, err := readFileData(audioFile)
 		if err != nil {
@@ -134,4 +139,13 @@ func abs16(v int16) int16 {
 		return -v
 	}
 	return v
+}
+
+func shrinkSignal(buf []float64) (r []float64) {
+	n := len(buf) / 2
+	r = make([]float64, n)
+	for i := 0; i < n; i++ {
+		r[i] = (buf[2*i] + buf[2*i+1]) / 2
+	}
+	return
 }
