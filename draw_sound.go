@@ -21,24 +21,19 @@ type SignalWindow struct {
 
 func (sw *SignalWindow) Get(v int) (r float64) {
 	end := sw.start*sw.scaleFactor + (v+1)*sw.scaleFactor
+	r = 0
 	for i := sw.start*sw.scaleFactor + v*sw.scaleFactor; i < end; i++ {
-		r += sw.buf[i]
+		if math.Abs(sw.buf[i]) > math.Abs(r) {
+			r = sw.buf[i]
+		}
 	}
-	return r / float64(sw.scaleFactor)
+	return r
 }
 
 func (sw *SignalWindow) Max() (mx float64) {
-	for i := 0; i < len(sw.buf); i += sw.scaleFactor {
-		t := float64(0)
-		for j := 0; j < sw.scaleFactor; j++ {
-			if i+j >= len(sw.buf) {
-				return
-			}
-			t += sw.buf[i+j]
-		}
-		t /= float64(sw.scaleFactor)
-		if math.Abs(t) > mx {
-			mx = math.Abs(t)
+	for i := 0; i < len(sw.buf); i++ {
+		if math.Abs(sw.buf[i]) > mx {
+			mx = math.Abs(sw.buf[i])
 		}
 	}
 	return
