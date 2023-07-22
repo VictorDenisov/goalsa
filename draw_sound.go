@@ -13,6 +13,20 @@ type WindowSize struct {
 	Width, Height int32
 }
 
+type SignalWindow struct {
+	buf         []float64
+	start       int
+	scaleFactor int
+}
+
+func (sw *SignalWindow) Get(v int) (r float64) {
+	end := sw.start + (v+1)*sw.scaleFactor
+	for i := sw.start + v*sw.scaleFactor; i < end; i++ {
+		r += sw.buf[i]
+	}
+	return r / float64(sw.scaleFactor)
+}
+
 func drawSound(audioFile string) {
 
 	var windowSize WindowSize
@@ -27,11 +41,8 @@ func drawSound(audioFile string) {
 		nil,
 		nil,
 	)
-	buf := shrinkSignal(res)
-	buf = shrinkSignal(buf)
-	buf = shrinkSignal(buf)
-	buf = shrinkSignal(buf)
-	buf = shrinkSignal(buf)
+	view := &SignalWindow{res, 0, 1}
+	buf := res
 	/*
 		buf, err := readFileData(audioFile)
 		if err != nil {
@@ -44,7 +55,7 @@ func drawSound(audioFile string) {
 			mx = math.Abs(buf[i])
 		}
 	}
-	var startOffset, lastOffset int32
+	var lastOffset int
 
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
@@ -81,16 +92,21 @@ func drawSound(audioFile string) {
 			case *sdl.MouseMotionEvent:
 				mousePos = sdl.Point{e.X, e.Y}
 				if leftMouseButtonDown {
-					startOffset = lastOffset - (mousePos.X-clickOffset.X)/barWidth
-					if startOffset < 0 {
-						startOffset = 0
+					view.start = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2
+					if view.start < 0 {
+						view.start = 0
 					}
 				}
+
+				/*
+					case *sd.MouseWheelEvent:
+						e.Y
+				*/
 			case *sdl.MouseButtonEvent:
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
 						leftMouseButtonDown = false
-						lastOffset = lastOffset - (mousePos.X-clickOffset.X)/barWidth
+						lastOffset = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2
 					}
 				} else if e.Type == sdl.MOUSEBUTTONDOWN {
 					if !leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
@@ -104,8 +120,8 @@ func drawSound(audioFile string) {
 			renderer.Clear()
 
 			renderer.SetDrawColor(0, 255, 0, 255)
-			for i := int32(0); i < windowSize.Width/(2*barWidth); i++ {
-				h := int32(float64(windowSize.Height) / 4.0 * float64(buf[i+startOffset]) / float64(mx))
+			for i := 0; i < int(windowSize.Width)/(2*barWidth); i++ {
+				h := int32(float64(windowSize.Height) / 4.0 * float64(view.Get(i)) / float64(mx))
 				rect := &sdl.Rect{int32(i) * barWidth * 2, windowSize.Height/2 - h, barWidth, h}
 				renderer.FillRect(rect)
 			}
