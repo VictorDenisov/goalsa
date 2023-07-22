@@ -19,15 +19,22 @@ type SignalWindow struct {
 	scaleFactor int
 }
 
-func (sw *SignalWindow) Get(v int) (r float64) {
+func (sw *SignalWindow) Get(v int) (l, u float64) {
 	end := sw.start*sw.scaleFactor + (v+1)*sw.scaleFactor
-	r = 0
+	l = 0
+	u = 0
 	for i := sw.start*sw.scaleFactor + v*sw.scaleFactor; i < end; i++ {
-		if math.Abs(sw.buf[i]) > math.Abs(r) {
-			r = sw.buf[i]
+		if i >= len(sw.buf) {
+			break
+		}
+		if sw.buf[i] > u {
+			u = sw.buf[i]
+		}
+		if sw.buf[i] < l {
+			l = sw.buf[i]
 		}
 	}
-	return r
+	return l, u
 }
 
 func (sw *SignalWindow) Max() (mx float64) {
@@ -128,8 +135,10 @@ func drawSound(audioFile string) {
 			renderer.SetDrawColor(0, 255, 0, 255)
 			mx := view.Max()
 			for i := 0; i < int(windowSize.Width)/(2*barWidth); i++ {
-				h := int32(float64(windowSize.Height) / 4.0 * float64(view.Get(i)) / float64(mx))
-				rect := &sdl.Rect{int32(i) * barWidth * 2, windowSize.Height/2 - h, barWidth, h}
+				l, u := view.Get(i)
+				lh := int32(float64(windowSize.Height) / 4.0 * float64(l) / float64(mx))
+				uh := int32(float64(windowSize.Height) / 4.0 * float64(u) / float64(mx))
+				rect := &sdl.Rect{int32(i) * barWidth * 2, windowSize.Height/2 - uh, barWidth, uh - lh}
 				renderer.FillRect(rect)
 			}
 			renderer.Present()
