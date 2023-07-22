@@ -20,8 +20,8 @@ type SignalWindow struct {
 }
 
 func (sw *SignalWindow) Get(v int) (r float64) {
-	end := sw.start + (v+1)*sw.scaleFactor
-	for i := sw.start + v*sw.scaleFactor; i < end; i++ {
+	end := sw.start*sw.scaleFactor + (v+1)*sw.scaleFactor
+	for i := sw.start*sw.scaleFactor + v*sw.scaleFactor; i < end; i++ {
 		r += sw.buf[i]
 	}
 	return r / float64(sw.scaleFactor)
@@ -98,10 +98,11 @@ func drawSound(audioFile string) {
 					}
 				}
 
-				/*
-					case *sd.MouseWheelEvent:
-						e.Y
-				*/
+			case *sdl.MouseWheelEvent:
+				view.scaleFactor += int(e.Y)
+				if view.scaleFactor < 1 {
+					view.scaleFactor = 1
+				}
 			case *sdl.MouseButtonEvent:
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
