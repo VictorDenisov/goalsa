@@ -27,6 +27,23 @@ func (sw *SignalWindow) Get(v int) (r float64) {
 	return r / float64(sw.scaleFactor)
 }
 
+func (sw *SignalWindow) Max() (mx float64) {
+	for i := 0; i < len(sw.buf); i += sw.scaleFactor {
+		t := float64(0)
+		for j := 0; j < sw.scaleFactor; j++ {
+			if i+j >= len(sw.buf) {
+				return
+			}
+			t += sw.buf[i+j]
+		}
+		t /= float64(sw.scaleFactor)
+		if math.Abs(t) > mx {
+			mx = math.Abs(t)
+		}
+	}
+	return
+}
+
 func drawSound(audioFile string) {
 
 	var windowSize WindowSize
@@ -42,19 +59,12 @@ func drawSound(audioFile string) {
 		nil,
 	)
 	view := &SignalWindow{res, 0, 1}
-	buf := res
 	/*
 		buf, err := readFileData(audioFile)
 		if err != nil {
 			panic(err)
 		}
 	*/
-	mx := float64(0)
-	for i := 0; i < len(buf); i++ {
-		if math.Abs(buf[i]) > mx {
-			mx = math.Abs(buf[i])
-		}
-	}
 	var lastOffset int
 
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
@@ -121,6 +131,7 @@ func drawSound(audioFile string) {
 			renderer.Clear()
 
 			renderer.SetDrawColor(0, 255, 0, 255)
+			mx := view.Max()
 			for i := 0; i < int(windowSize.Width)/(2*barWidth); i++ {
 				h := int32(float64(windowSize.Height) / 4.0 * float64(view.Get(i)) / float64(mx))
 				rect := &sdl.Rect{int32(i) * barWidth * 2, windowSize.Height/2 - h, barWidth, h}
