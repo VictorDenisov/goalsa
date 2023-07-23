@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math"
 	"os"
 
@@ -123,7 +122,6 @@ outer:
 				if e.Event == sdl.WINDOWEVENT_RESIZED {
 					windowSize.Width = e.Data1
 					windowSize.Height = e.Data2
-					fmt.Printf("Current window size: %v\n", windowSize)
 
 				}
 				view.Draw(renderer, windowSize)
