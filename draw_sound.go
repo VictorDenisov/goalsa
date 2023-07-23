@@ -22,8 +22,8 @@ type SignalWindow struct {
 func (sw *SignalWindow) Get(v int) (l, u float64) {
 	l = 0
 	u = 0
-	start := sw.start*sw.scaleFactor + v*sw.scaleFactor
-	end := sw.start*sw.scaleFactor + (v+1)*sw.scaleFactor
+	start := sw.start + v*sw.scaleFactor
+	end := sw.start + (v+1)*sw.scaleFactor
 	if end < start {
 		start, end = end, start
 	}
@@ -111,7 +111,7 @@ func drawSound(audioFile string) {
 			case *sdl.MouseMotionEvent:
 				mousePos = sdl.Point{e.X, e.Y}
 				if leftMouseButtonDown {
-					view.start = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2
+					view.start = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*view.scaleFactor
 					if view.start < 0 {
 						view.start = 0
 					}
@@ -126,7 +126,7 @@ func drawSound(audioFile string) {
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
 						leftMouseButtonDown = false
-						lastOffset = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2
+						lastOffset = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*view.scaleFactor
 					}
 				} else if e.Type == sdl.MOUSEBUTTONDOWN {
 					if !leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
