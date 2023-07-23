@@ -114,7 +114,7 @@ func drawSound(audioFile string) {
 	defer renderer.Destroy()
 	running := true
 	for running {
-		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
+		for event := sdl.WaitEvent(); event != nil; event = sdl.WaitEvent() {
 			sdl.Delay(10)
 			switch e := event.(type) {
 			case *sdl.QuitEvent:
