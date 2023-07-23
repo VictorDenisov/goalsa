@@ -112,15 +112,13 @@ func drawSound(audioFile string) {
 		panic(err)
 	}
 	defer renderer.Destroy()
-	running := true
-	for running {
+outer:
+	for {
 		for event := sdl.WaitEvent(); event != nil; event = sdl.WaitEvent() {
-			sdl.Delay(10)
 			switch e := event.(type) {
 			case *sdl.QuitEvent:
 				println("Quit")
-				running = false
-				break
+				break outer
 			case *sdl.WindowEvent:
 				if e.Event == sdl.WINDOWEVENT_RESIZED {
 					windowSize.Width = e.Data1
