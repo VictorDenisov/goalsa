@@ -53,10 +53,29 @@ func (sw *SignalWindow) Max() (mx float64) {
 	return
 }
 
+const barWidth = 1
+
+func (sw *SignalWindow) Draw(renderer *sdl.Renderer, windowSize WindowSize) {
+	renderer.SetDrawColor(242, 242, 242, 255)
+	renderer.Clear()
+
+	renderer.SetDrawColor(0, 255, 0, 255)
+	mx := sw.Max()
+	lb := -int(windowSize.Width) / (4 * barWidth)
+	for i := lb; i < int(windowSize.Width)/(4*barWidth); i++ {
+		l, u := sw.Get(i)
+		lh := int32(float64(windowSize.Height) / 4.0 * float64(l) / float64(mx))
+		uh := int32(float64(windowSize.Height) / 4.0 * float64(u) / float64(mx))
+		x := int32(i - lb)
+		rect := &sdl.Rect{x * barWidth * 2, windowSize.Height/2 - uh, barWidth, uh - lh}
+		renderer.FillRect(rect)
+	}
+	renderer.Present()
+}
+
 func drawSound(audioFile string) {
 
 	var windowSize WindowSize
-	const barWidth = 1
 
 	var leftMouseButtonDown bool
 	var mousePos sdl.Point
@@ -107,7 +126,9 @@ func drawSound(audioFile string) {
 					windowSize.Width = e.Data1
 					windowSize.Height = e.Data2
 					fmt.Printf("Current window size: %v\n", windowSize)
+
 				}
+				view.Draw(renderer, windowSize)
 			case *sdl.MouseMotionEvent:
 				mousePos = sdl.Point{e.X, e.Y}
 				if leftMouseButtonDown {
@@ -115,13 +136,15 @@ func drawSound(audioFile string) {
 					if view.start < 0 {
 						view.start = 0
 					}
+					view.Draw(renderer, windowSize)
 				}
 
 			case *sdl.MouseWheelEvent:
-				view.scaleFactor += int(e.Y)
+				view.scaleFactor -= int(e.Y)
 				if view.scaleFactor < 1 {
 					view.scaleFactor = 1
 				}
+				view.Draw(renderer, windowSize)
 			case *sdl.MouseButtonEvent:
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
@@ -136,21 +159,6 @@ func drawSound(audioFile string) {
 					}
 				}
 			}
-			renderer.SetDrawColor(242, 242, 242, 255)
-			renderer.Clear()
-
-			renderer.SetDrawColor(0, 255, 0, 255)
-			mx := view.Max()
-			lb := -int(windowSize.Width) / (4 * barWidth)
-			for i := lb; i < int(windowSize.Width)/(4*barWidth); i++ {
-				l, u := view.Get(i)
-				lh := int32(float64(windowSize.Height) / 4.0 * float64(l) / float64(mx))
-				uh := int32(float64(windowSize.Height) / 4.0 * float64(u) / float64(mx))
-				x := int32(i - lb)
-				rect := &sdl.Rect{x * barWidth * 2, windowSize.Height/2 - uh, barWidth, uh - lh}
-				renderer.FillRect(rect)
-			}
-			renderer.Present()
 
 		}
 	}
