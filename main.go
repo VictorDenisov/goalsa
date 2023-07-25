@@ -89,7 +89,7 @@ func main() {
 				Usage:   "Detect morse code in a file",
 				Action: func(cCtx *cli.Context) error {
 					fmt.Printf("Handling file name: %s\n", fileName)
-					_, res, values, _ := processFile(
+					_, res, values, _, _ := processFile(
 						fileName,
 						&Range{lb, ub},
 						&Range{lowerClassificationBoundary, upperClassificationBoundary},
@@ -248,15 +248,16 @@ func hann(y []float64) {
 	}
 }
 
-func processFile(name string, rng *Range, classRng *Range) (sig []float64, res []float64, values []bool, err error) {
+func processFile(name string, rng *Range, classRng *Range) (sig []float64, res []float64, values []bool, linSpectra []float64, err error) {
 
 	values = make([]bool, 0)
+	linSpectra = make([]float64, 0)
 
 	filter := NewBpFilter(200, 7.0/441, 30.0/441, 441)
 
 	file, err := os.Open(name)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	defer file.Close()
 	sig = make([]float64, 0)
@@ -279,6 +280,7 @@ func processFile(name string, rng *Range, classRng *Range) (sig []float64, res [
 		hann(buf)
 		rawSpectrum := ToAbs(fft.FFTReal(buf))
 		spectra = append(spectra, rawSpectrum[0:222])
+		linSpectra = append(linSpectra, rawSpectrum...)
 		if rng != nil && pieceNum > rng.lb && pieceNum < rng.ub {
 			fn := fmt.Sprintf("%d.html", pieceNum)
 			drawChart(fn, rawSpectrum)
@@ -311,7 +313,7 @@ exit:
 	for i := 0; i < len(spectra); i++ {
 		values = append(values, sd.isSignal(spectra[i]))
 	}
-	return sig, res, values, nil
+	return sig, res, values, linSpectra, nil
 }
 
 func rng(n int) []int {

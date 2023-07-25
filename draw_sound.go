@@ -54,10 +54,7 @@ func (sw *SignalWindow) Max() (mx float64) {
 
 const barWidth = 1
 
-func (sw *SignalWindow) Draw(renderer *sdl.Renderer, windowSize WindowSize) {
-	renderer.SetDrawColor(242, 242, 242, 255)
-	renderer.Clear()
-
+func (sw *SignalWindow) Draw(zeroPosition int32, renderer *sdl.Renderer, windowSize WindowSize) {
 	renderer.SetDrawColor(0, 255, 0, 255)
 	mx := sw.Max()
 	lb := -int(windowSize.Width) / (4 * barWidth)
@@ -66,7 +63,7 @@ func (sw *SignalWindow) Draw(renderer *sdl.Renderer, windowSize WindowSize) {
 		lh := int32(float64(windowSize.Height) / 4.0 * float64(l) / float64(mx))
 		uh := int32(float64(windowSize.Height) / 4.0 * float64(u) / float64(mx))
 		x := int32(i - lb)
-		rect := &sdl.Rect{x * barWidth * 2, windowSize.Height/2 - uh, barWidth, uh - lh}
+		rect := &sdl.Rect{x * barWidth * 2, zeroPosition - uh, barWidth, uh - lh}
 		renderer.FillRect(rect)
 	}
 	renderer.Present()
@@ -80,12 +77,13 @@ func drawSound(audioFile string) {
 	var mousePos sdl.Point
 	var clickOffset sdl.Point
 
-	_, res, _, _ := processFile(
+	_, res, _, spectra, _ := processFile(
 		audioFile,
 		nil,
 		nil,
 	)
 	view := &SignalWindow{res, 0, 1}
+	spectraWindow := &SignalWindow{spectra, 0, 1}
 	/*
 		buf, err := readFileData(audioFile)
 		if err != nil {
@@ -124,23 +122,46 @@ outer:
 					windowSize.Height = e.Data2
 
 				}
-				view.Draw(renderer, windowSize)
+				renderer.SetDrawColor(242, 242, 242, 255)
+				renderer.Clear()
+
+				view.Draw(windowSize.Height/4, renderer, windowSize)
+				spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
 			case *sdl.MouseMotionEvent:
 				mousePos = sdl.Point{e.X, e.Y}
 				if leftMouseButtonDown {
+
+					renderer.SetDrawColor(242, 242, 242, 255)
+					renderer.Clear()
+
 					view.start = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*view.scaleFactor
 					if view.start < 0 {
 						view.start = 0
 					}
-					view.Draw(renderer, windowSize)
+					view.Draw(windowSize.Height/4, renderer, windowSize)
+
+					spectraWindow.start = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*spectraWindow.scaleFactor
+					if spectraWindow.start < 0 {
+						spectraWindow.start = 0
+					}
+					spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
 				}
 
 			case *sdl.MouseWheelEvent:
+				renderer.SetDrawColor(242, 242, 242, 255)
+				renderer.Clear()
+
 				view.scaleFactor -= int(e.Y)
 				if view.scaleFactor < 1 {
 					view.scaleFactor = 1
 				}
-				view.Draw(renderer, windowSize)
+				view.Draw(windowSize.Height/4, renderer, windowSize)
+
+				spectraWindow.scaleFactor -= int(e.Y)
+				if spectraWindow.scaleFactor < 1 {
+					spectraWindow.scaleFactor = 1
+				}
+				spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
 			case *sdl.MouseButtonEvent:
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
