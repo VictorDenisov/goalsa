@@ -161,6 +161,65 @@ func expectationMaximizationClassifySegments(segments [][]float64) (sd *EMSignal
 	return &EMSignalDetector{r, centroids, sigma, pi}
 }
 
+type SingleFrequencyDetector struct {
+	signal float64
+	noise  float64
+}
+
+func (sd *SingleFrequencyDetector) isSignal(sample float64) bool {
+	return math.Abs(sample-sd.signal) < math.Abs(sample-sd.noise)
+}
+
+func classifyFromSingleFrequency(signals []float64) (sd *SingleFrequencyDetector) {
+	n := len(signals)
+
+	labels := make([]bool, n)
+
+	allMin, _ := segmentMin(signals)
+	allMax, _ := segmentMax(signals)
+
+	middle := (allMin + allMax) / 2
+
+	for i := 0; i < n; i++ {
+		labels[i] = signals[i] > middle
+	}
+
+	var signalMean float64
+	var noiseMean float64
+	for {
+		signalMean = 0
+		noiseMean = 0
+
+		signalNum := 0
+		noiseNum := 0
+		for i := 0; i < n; i++ {
+			if labels[i] {
+				signalMean += signals[i]
+				signalNum++
+			} else {
+				noiseMean += signals[i]
+				noiseNum++
+			}
+		}
+
+		signalMean /= float64(signalNum)
+		noiseMean /= float64(noiseNum)
+
+		labelChanged := false
+		for i := 0; i < n; i++ {
+			newLabel := math.Abs(signalMean-signals[i]) < math.Abs(noiseMean-signals[i])
+			labelChanged = labelChanged || (labels[i] != newLabel)
+			labels[i] = newLabel
+		}
+		if !labelChanged {
+			break
+		}
+	}
+
+	sd = &SingleFrequencyDetector{signalMean, noiseMean}
+	return sd
+}
+
 func plus(a, b []float64) (r []float64) {
 	r = make([]float64, len(b))
 	for i := 0; i < len(b); i++ {

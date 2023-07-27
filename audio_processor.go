@@ -75,16 +75,24 @@ exit:
 	significantFrequency, err := calculateSignificantFrequency(spectra)
 	fmt.Printf("Significant frequency result: %v, %v\n", significantFrequency, err)
 
-	var sd *EMSignalDetector
-	if classRng == nil || (classRng.lb == 0 && classRng.ub == 0) {
-		sd = expectationMaximizationClassifySegments(spectra)
-	} else {
-		sd = expectationMaximizationClassifySegments(spectra[classRng.lb:classRng.ub])
-	}
-	drawChart("signalMean.html", sd.centroids[0])
-	drawChart("noiseMean.html", sd.centroids[1])
+	signals := make([]float64, len(spectra))
 	for i := 0; i < len(spectra); i++ {
-		values = append(values, sd.isSignal(spectra[i]))
+		signals[i] = spectra[i][significantFrequency]
+	}
+	sd := classifyFromSingleFrequency(signals)
+	/*
+		var sd *EMSignalDetector
+		if classRng == nil || (classRng.lb == 0 && classRng.ub == 0) {
+			sd = expectationMaximizationClassifySegments(spectra)
+		} else {
+			sd = expectationMaximizationClassifySegments(spectra[classRng.lb:classRng.ub])
+		}
+	*/
+
+	//drawChart("signalMean.html", sd.centroids[0])
+	//drawChart("noiseMean.html", sd.centroids[1])
+	for i := 0; i < len(spectra); i++ {
+		values = append(values, sd.isSignal(signals[i]))
 	}
 	return sig, res, values, linSpectra, nil
 }
