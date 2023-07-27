@@ -91,7 +91,7 @@ exit:
 
 	//drawChart("signalMean.html", sd.centroids[0])
 	//drawChart("noiseMean.html", sd.centroids[1])
-	for i := 0; i < len(spectra); i++ {
+	for i := 0; i < len(signals); i++ {
 		values = append(values, sd.isSignal(signals[i]))
 	}
 	return sig, res, values, linSpectra, nil
