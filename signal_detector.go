@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	_ "fmt"
 	"math"
 )
 
@@ -122,21 +122,21 @@ func expectationMaximizationClassifySegments(segments [][]float64) (sd *EMSignal
 	}
 	for i := 0; i < n; i++ {
 		//sumR := float64(0)
-		fmt.Printf("dist: ")
+		//fmt.Printf("dist: ")
 		for k := 0; k < nCentroids; k++ {
-			v := pi[k] * math.Exp(-dist(centroids[k], segments[i])/sigma[k]/sigma[k])
-			v = float64(m) //sq2pi * sigma[k]
-			fmt.Printf("%f ", v)
+			//v := pi[k] * math.Exp(-dist(centroids[k], segments[i])/sigma[k]/sigma[k])
+			//v = float64(m) //sq2pi * sigma[k]
+			//fmt.Printf("%f ", v)
 			r[i][k] = pi[k] * math.Exp(-dist(centroids[k], segments[i])/sigma[k]/sigma[k]) / math.Pow(sq2pi*sigma[k], float64(m))
 			//sumR = r[i][k]
 		}
-		fmt.Printf("\n")
+		//fmt.Printf("\n")
 
 		for k := 0; k < nCentroids; k++ {
 			//r[i][k] /= sumR
-			fmt.Printf("%f ", r[i][k])
+			//fmt.Printf("%f ", r[i][k])
 		}
-		fmt.Printf("\n")
+		//fmt.Printf("\n")
 	}
 	R := make([]float64, nCentroids)
 	totalR := float64(0)

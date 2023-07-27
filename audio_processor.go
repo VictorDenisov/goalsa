@@ -71,6 +71,10 @@ exit:
 		}
 		return sig, res, values, nil
 	*/
+
+	significantFrequency, err := calculateSignificantFrequency(spectra)
+	fmt.Printf("Significant frequency result: %v, %v\n", significantFrequency, err)
+
 	var sd *EMSignalDetector
 	if classRng == nil || (classRng.lb == 0 && classRng.ub == 0) {
 		sd = expectationMaximizationClassifySegments(spectra)
@@ -253,4 +257,28 @@ func windowSincKernelBp(m int, fcL, fcH float64) []float64 {
 	}
 	bp[len(bp)/2] += 1
 	return bp
+}
+
+func calculateSignificantFrequency(spectra [][]float64) (int, error) {
+	if len(spectra) == 0 {
+		return 0, fmt.Errorf("Not enough data to calculate significant frequency")
+	}
+	n := len(spectra)
+	m := len(spectra[0])
+	sum := make([]float64, m)
+	for i := 0; i < n; i++ {
+		for j := 0; j < m; j++ {
+			sum[j] += spectra[i][j]
+		}
+	}
+	for j := 0; j < m; j++ {
+		sum[j] /= float64(n)
+	}
+	r := 0
+	for j := 1; j < m; j++ {
+		if sum[j] > sum[r] {
+			r = j
+		}
+	}
+	return r, nil
 }
