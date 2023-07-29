@@ -1,9 +1,11 @@
 package main
 
 import (
-	_ "fmt"
+	"fmt"
 	"math"
 )
+
+// -------------- KMeans Signal Detector ---------------
 
 type KMeansSignalDetector struct {
 	signal []float64
@@ -12,17 +14,6 @@ type KMeansSignalDetector struct {
 
 func (sd *KMeansSignalDetector) isSignal(sample []float64) bool {
 	return distSq(sample, sd.signal) < distSq(sample, sd.noise)
-}
-
-type EMSignalDetector struct {
-	r         [][]float64
-	centroids [][]float64
-	sigma     []float64
-	pi        []float64
-}
-
-func (sd *EMSignalDetector) isSignal(sample []float64) bool {
-	return distSq(sample, sd.centroids[0]) < distSq(sample, sd.centroids[1])
 }
 
 func classifySegments(segments [][]float64) (sd *KMeansSignalDetector) {
@@ -81,6 +72,19 @@ func classifySegments(segments [][]float64) (sd *KMeansSignalDetector) {
 
 	sd = &KMeansSignalDetector{signalMean, noiseMean}
 	return sd
+}
+
+// ---------------- EM Signal Detector ----------------
+
+type EMSignalDetector struct {
+	r         [][]float64
+	centroids [][]float64
+	sigma     []float64
+	pi        []float64
+}
+
+func (sd *EMSignalDetector) isSignal(sample []float64) bool {
+	return distSq(sample, sd.centroids[0]) < distSq(sample, sd.centroids[1])
 }
 
 func expectationMaximizationClassifySegments(segments [][]float64) (sd *EMSignalDetector) {
@@ -161,6 +165,8 @@ func expectationMaximizationClassifySegments(segments [][]float64) (sd *EMSignal
 	return &EMSignalDetector{r, centroids, sigma, pi}
 }
 
+// ------------- Single Frequency Detector -------------
+
 type SingleFrequencyDetector struct {
 	signal float64
 	noise  float64
@@ -219,6 +225,157 @@ func classifyFromSingleFrequency(signals []float64) (sd *SingleFrequencyDetector
 	sd = &SingleFrequencyDetector{signalMean, noiseMean}
 	return sd
 }
+
+// ----------- EM Single Frequency Detector ------------
+
+type EMSingleFrequencyDetector struct {
+	m     []float64
+	sigma []float64
+	pi    []float64
+}
+
+func (sd *EMSingleFrequencyDetector) isSignal(sample float64) bool {
+	rk := assignPoint(sample, sd.m, sd.sigma, sd.pi)
+	return rk[0] > rk[1]
+}
+
+func classifyEMFromSingleFrequency(signals []float64) (sd *EMSingleFrequencyDetector) {
+	n := len(signals)
+
+	r := make([][]float64, 2)
+
+	m := make([]float64, 2)
+	oldM := make([]float64, 2)
+
+	sigma := make([]float64, 2)
+	oldSigma := make([]float64, 2)
+
+	pi := make([]float64, 2)
+	oldPi := make([]float64, 2)
+
+	for i := 0; i < 2; i++ {
+		r[i] = make([]float64, n)
+	}
+
+	allMin, _ := segmentMin(signals)
+	allMax, _ := segmentMax(signals)
+
+	//middle := (allMin + allMax) / 3
+
+	m[0] = allMin + (allMax-allMin)/3
+	m[1] = allMin + (allMax-allMin)/3*2
+	sigma[0] = 5
+	sigma[1] = 5
+	pi[0] = 0.5
+	pi[1] = 0.5
+
+	/*
+		for i := 0; i < n; i++ {
+			if signals[i] > middle {
+				r[0][i] = 1
+			} else {
+				r[1][i] = 1
+			}
+		}
+	*/
+	//updateStep(n, r, signals, m, sigma, pi)
+	fmt.Printf("Initial assignment\n")
+	fmt.Printf("r: %v\n", r)
+	fmt.Printf("m: %v\n", m)
+	fmt.Printf("sigma: %v\n", sigma)
+	fmt.Printf("pi: %v\n", pi)
+	stepCount := 0
+	for {
+		copy(oldM, m)
+		copy(oldSigma, sigma)
+		copy(oldPi, pi)
+		assignmentStep(n, r, signals, m, sigma, pi)
+
+		if stepCount < 5 {
+			fmt.Printf("r: %v\n", r)
+			fmt.Printf("m: %v\n", m)
+			fmt.Printf("sigma: %v\n", sigma)
+			fmt.Printf("pi: %v\n", pi)
+		}
+
+		updateStep(n, r, signals, m, sigma, pi)
+
+		changed := false
+		for k := 0; k < 2; k++ {
+			if math.Abs(m[k]-oldM[k]) > 0.000001 {
+				changed = true
+			}
+			if math.Abs(sigma[k]-oldSigma[k]) > 0.000001 {
+				changed = true
+			}
+			if math.Abs(pi[k]-oldPi[k]) > 0.000001 {
+				changed = true
+			}
+		}
+		if !changed {
+			break
+		}
+		stepCount++
+	}
+	return &EMSingleFrequencyDetector{m, sigma, pi}
+
+}
+
+func assignmentStep(n int, r [][]float64, x []float64, m []float64, sigma []float64, pi []float64) {
+	for i := 0; i < n; i++ {
+		rk := assignPoint(x[i], m, sigma, pi)
+		for k := 0; k < 2; k++ {
+			r[k][i] = rk[k]
+		}
+	}
+}
+
+func assignPoint(x float64, m []float64, sigma []float64, pi []float64) (r []float64) {
+	var rkt float64
+	r = make([]float64, 2)
+	fmt.Printf("Assign point: %v, %v, %v, %v\n", x, m, sigma, pi)
+	for k := 0; k < 2; k++ {
+		fmt.Printf("%v\n", math.Abs(m[k]-x))
+		fmt.Printf("%v\n", math.Abs(m[k]-x)/sigma[k])
+		fmt.Printf("%v\n", math.Exp(-math.Abs(m[k]-x)/sigma[k]))
+		rkt += pi[k] * math.Exp(-math.Abs(m[k]-x)/sigma[k]) / math.Sqrt(2*math.Pi*sigma[k])
+	}
+	fmt.Printf("rkt: %v\n", rkt)
+	for k := 0; k < 2; k++ {
+		r[k] = pi[k] * math.Exp(-math.Abs(m[k]-x)/sigma[k]) / math.Sqrt(2*math.Pi*sigma[k]) / rkt
+		fmt.Printf("k: %v, rk: %v\n", k, r[k])
+	}
+	return r
+}
+
+func updateStep(n int, r [][]float64, x []float64, m []float64, sigma []float64, pi []float64) {
+	R := make([]float64, 2)
+	var Rsum float64
+	for k := 0; k < 2; k++ {
+		for i := 0; i < n; i++ {
+			R[k] += r[k][i]
+		}
+		Rsum += R[k]
+	}
+	for k := 0; k < 2; k++ {
+		m[k] = 0
+		for i := 0; i < n; i++ {
+			m[k] += r[k][i] * x[i]
+		}
+		m[k] /= R[k]
+
+		sigma[k] = 0
+		for i := 0; i < n; i++ {
+			sigma[k] += r[k][i] * (x[i] - m[k]) * (x[i] - m[k])
+		}
+		sigma[k] /= R[k]
+
+		pi[k] = R[k] / Rsum
+	}
+
+}
+
+// ----------------------- Misc Functions -----------------------
 
 func plus(a, b []float64) (r []float64) {
 	r = make([]float64, len(b))

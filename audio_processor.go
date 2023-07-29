@@ -79,7 +79,8 @@ exit:
 	for i := 0; i < len(spectra); i++ {
 		signals[i] = spectra[i][significantFrequency]
 	}
-	sd := classifyFromSingleFrequency(signals)
+	sd := classifyEMFromSingleFrequency(signals)
+	fmt.Printf("EM Classifier: %v\n", sd)
 	/*
 		var sd *EMSignalDetector
 		if classRng == nil || (classRng.lb == 0 && classRng.ub == 0) {
