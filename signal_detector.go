@@ -260,12 +260,31 @@ func classifyEMFromSingleFrequency(signals []float64) (sd *EMSingleFrequencyDete
 	allMin, _ := segmentMin(signals)
 	allMax, _ := segmentMax(signals)
 
-	//middle := (allMin + allMax) / 3
+	middle := (allMin + allMax) / 2
 
-	m[0] = allMin + (allMax-allMin)/3
-	m[1] = allMin + (allMax-allMin)/3*2
-	sigma[0] = 5
-	sigma[1] = 5
+	m[0] = allMax
+	m[1] = allMin
+
+	aboveMiddle := 0
+	sigma[0] = 0
+	for i := 0; i < n; i++ {
+		if signals[i] > middle {
+			sigma[0] += (m[0] - signals[i]) * (m[0] - signals[i])
+			aboveMiddle++
+		}
+	}
+	sigma[0] /= float64(aboveMiddle)
+
+	belowMiddle := 0
+	sigma[1] = 0
+	for i := 0; i < n; i++ {
+		if signals[i] < middle {
+			sigma[1] += (m[1] - signals[i]) * (m[1] - signals[i])
+			belowMiddle++
+		}
+	}
+	sigma[1] /= float64(belowMiddle)
+
 	pi[0] = 0.5
 	pi[1] = 0.5
 
@@ -279,6 +298,7 @@ func classifyEMFromSingleFrequency(signals []float64) (sd *EMSingleFrequencyDete
 		}
 	*/
 	//updateStep(n, r, signals, m, sigma, pi)
+	assignmentStep(n, r, signals, m, sigma, pi)
 	fmt.Printf("Initial assignment\n")
 	fmt.Printf("r: %v\n", r)
 	fmt.Printf("m: %v\n", m)
@@ -291,28 +311,31 @@ func classifyEMFromSingleFrequency(signals []float64) (sd *EMSingleFrequencyDete
 		copy(oldPi, pi)
 		assignmentStep(n, r, signals, m, sigma, pi)
 
-		if stepCount < 5 {
+		/*
+			fmt.Printf("step count: %v\n", stepCount)
 			fmt.Printf("r: %v\n", r)
 			fmt.Printf("m: %v\n", m)
 			fmt.Printf("sigma: %v\n", sigma)
 			fmt.Printf("pi: %v\n", pi)
-		}
+		*/
 
 		updateStep(n, r, signals, m, sigma, pi)
 
-		changed := false
-		for k := 0; k < 2; k++ {
-			if math.Abs(m[k]-oldM[k]) > 0.000001 {
-				changed = true
+		/*
+			//changed := false
+			for k := 0; k < 2; k++ {
+				if math.Abs(m[k]-oldM[k]) > 0.000001 {
+					changed = true
+				}
+				if math.Abs(sigma[k]-oldSigma[k]) > 0.000001 {
+					changed = true
+				}
+				if math.Abs(pi[k]-oldPi[k]) > 0.000001 {
+					changed = true
+				}
 			}
-			if math.Abs(sigma[k]-oldSigma[k]) > 0.000001 {
-				changed = true
-			}
-			if math.Abs(pi[k]-oldPi[k]) > 0.000001 {
-				changed = true
-			}
-		}
-		if !changed {
+		*/
+		if stepCount > 100 {
 			break
 		}
 		stepCount++
@@ -333,17 +356,17 @@ func assignmentStep(n int, r [][]float64, x []float64, m []float64, sigma []floa
 func assignPoint(x float64, m []float64, sigma []float64, pi []float64) (r []float64) {
 	var rkt float64
 	r = make([]float64, 2)
-	fmt.Printf("Assign point: %v, %v, %v, %v\n", x, m, sigma, pi)
+	//fmt.Printf("Assign point: %v, %v, %v, %v\n", x, m, sigma, pi)
 	for k := 0; k < 2; k++ {
-		fmt.Printf("%v\n", math.Abs(m[k]-x))
-		fmt.Printf("%v\n", math.Abs(m[k]-x)/sigma[k])
-		fmt.Printf("%v\n", math.Exp(-math.Abs(m[k]-x)/sigma[k]))
-		rkt += pi[k] * math.Exp(-math.Abs(m[k]-x)/sigma[k]) / math.Sqrt(2*math.Pi*sigma[k])
+		//fmt.Printf("%v\n", math.Abs(m[k]-x))
+		//fmt.Printf("%v\n", math.Abs(m[k]-x)/sigma[k])
+		//fmt.Printf("%v\n", math.Exp(-math.Abs(m[k]-x)/sigma[k]))
+		rkt += pi[k] * math.Exp(-(m[k]-x)*(m[k]-x)/sigma[k]) / math.Sqrt(2*math.Pi*sigma[k])
 	}
-	fmt.Printf("rkt: %v\n", rkt)
+	//fmt.Printf("rkt: %v\n", rkt)
 	for k := 0; k < 2; k++ {
-		r[k] = pi[k] * math.Exp(-math.Abs(m[k]-x)/sigma[k]) / math.Sqrt(2*math.Pi*sigma[k]) / rkt
-		fmt.Printf("k: %v, rk: %v\n", k, r[k])
+		r[k] = pi[k] * math.Exp(-(m[k]-x)*(m[k]-x)/sigma[k]) / math.Sqrt(2*math.Pi*sigma[k]) / rkt
+		//fmt.Printf("k: %v, rk: %v\n", k, r[k])
 	}
 	return r
 }

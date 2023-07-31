@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/cmplx"
 	"os"
+	//"sort"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
@@ -79,6 +80,13 @@ exit:
 	for i := 0; i < len(spectra); i++ {
 		signals[i] = spectra[i][significantFrequency]
 	}
+	//signals = signals[10:len(signals)]
+	//sort.Float64s(signals)
+	/*
+		for i := 0; i < len(signals); i++ {
+			fmt.Printf("%0.6f\n", signals[i])
+		}
+	*/
 	sd := classifyEMFromSingleFrequency(signals)
 	fmt.Printf("EM Classifier: %v\n", sd)
 	/*
@@ -92,9 +100,13 @@ exit:
 
 	//drawChart("signalMean.html", sd.centroids[0])
 	//drawChart("noiseMean.html", sd.centroids[1])
+
 	for i := 0; i < len(signals); i++ {
+		//rk := assignPoint(signals[i], sd.m, sd.sigma, sd.pi)
+		//fmt.Printf("%v\n", rk)
 		values = append(values, sd.isSignal(signals[i]))
 	}
+
 	return sig, res, values, linSpectra, nil
 }
 
