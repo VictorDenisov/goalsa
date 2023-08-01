@@ -6,7 +6,7 @@ import (
 	"math"
 	"math/cmplx"
 	"os"
-	//"sort"
+	"sort"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
@@ -87,7 +87,10 @@ exit:
 			fmt.Printf("%0.6f\n", signals[i])
 		}
 	*/
-	sd := classifyEMFromSingleFrequency(signals)
+	signal := make([]float64, len(spectra))
+	copy(signal, signals)
+	signal = cleanupSignal(signal)
+	sd := classifyEMFromSingleFrequency(signal)
 	fmt.Printf("EM Classifier: %v\n", sd)
 	/*
 		var sd *EMSignalDetector
@@ -108,6 +111,34 @@ exit:
 	}
 
 	return sig, res, values, linSpectra, nil
+}
+
+func cleanupSignal(signal []float64) []float64 {
+	sort.Float64s(signal)
+	for {
+		allMin := signal[0]
+		allMax := signal[len(signal)-1]
+		middle := (allMin + allMax) / 2
+
+		aboveMiddle := 0
+		belowMiddle := 0
+
+		for _, v := range signal {
+			if v > middle {
+				aboveMiddle++
+			} else {
+				belowMiddle++
+			}
+		}
+		if aboveMiddle == 1 {
+			signal = signal[0 : len(signal)-1]
+		} else if belowMiddle == 1 {
+			signal = signal[1:len(signal)]
+		} else {
+			break
+		}
+	}
+	return signal
 }
 
 func processWhole() {

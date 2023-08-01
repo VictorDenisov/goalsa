@@ -274,6 +274,7 @@ func classifyEMFromSingleFrequency(signals []float64) (sd *EMSingleFrequencyDete
 		}
 	}
 	sigma[0] /= float64(aboveMiddle)
+	fmt.Printf("aboveMiddle: %v\n", aboveMiddle)
 
 	belowMiddle := 0
 	sigma[1] = 0
@@ -284,6 +285,7 @@ func classifyEMFromSingleFrequency(signals []float64) (sd *EMSingleFrequencyDete
 		}
 	}
 	sigma[1] /= float64(belowMiddle)
+	fmt.Printf("belowMiddle: %v\n", belowMiddle)
 
 	pi[0] = 0.5
 	pi[1] = 0.5
