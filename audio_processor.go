@@ -87,10 +87,10 @@ exit:
 			fmt.Printf("%0.6f\n", signals[i])
 		}
 	*/
-	signal := make([]float64, len(spectra))
-	copy(signal, signals)
-	signal = cleanupSignal(signal)
-	sd := classifyEMFromSingleFrequency(signal)
+	tSig := make([]float64, len(spectra))
+	copy(tSig, signals)
+	tSig = cleanupSignal(tSig)
+	sd := classifyEMFromSingleFrequency(tSig)
 	fmt.Printf("EM Classifier: %v\n", sd)
 	/*
 		var sd *EMSignalDetector
