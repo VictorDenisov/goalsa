@@ -19,7 +19,7 @@ func record(fileName string) {
 	var handle *C.snd_pcm_t
 	var rc C.int
 
-	deviceCString := C.CString("default")
+	deviceCString := C.CString("plughw:2,0")
 	defer C.free(unsafe.Pointer(deviceCString))
 
 	rc = C.snd_pcm_open(&handle, deviceCString, C.SND_PCM_STREAM_CAPTURE, 0)

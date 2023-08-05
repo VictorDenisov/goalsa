@@ -109,8 +109,17 @@ exit:
 		//fmt.Printf("%v\n", rk)
 		values = append(values, sd.isSignal(signals[i]))
 	}
+	smoothOutSignal(values)
 
 	return sig, res, values, linSpectra, nil
+}
+
+func smoothOutSignal(values []bool) {
+	for i := 1; i < len(values)-1; i++ {
+		if values[i-1] == values[i+1] && values[i-1] != values[i] {
+			values[i] = values[i-1]
+		}
+	}
 }
 
 func cleanupSignal(signal []float64) []float64 {

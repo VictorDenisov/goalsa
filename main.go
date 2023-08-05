@@ -80,6 +80,7 @@ func main() {
 					printBoolArray(values)
 					drawChart("filtered.html", res[70000:180000])
 					es := measureIntervals(values)
+					fmt.Printf("Elements: %v\n", es)
 					s := detectCode(es)
 					fmt.Printf("String: %s\n", s)
 					return nil

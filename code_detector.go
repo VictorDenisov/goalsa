@@ -86,6 +86,8 @@ type Element struct {
 
 func detectCode(ds []Element) string {
 	ditMean, dahMean := classifySignals(ds)
+	fmt.Printf("dit mean: %v\n", ditMean)
+	fmt.Printf("dah mean: %v\n", dahMean)
 	ditGap := ditMean
 	charGap := dahMean
 	wordGap := 7 * ditGap
@@ -115,6 +117,7 @@ func detectCode(ds []Element) string {
 			}
 		}
 	}
+	fmt.Printf("res: %v\n", string(res))
 	str += string(alphabet[code(char)])
 	return str
 }
