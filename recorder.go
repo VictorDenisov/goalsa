@@ -15,11 +15,11 @@ import (
 */
 import "C"
 
-func record(fileName string) {
+func record(fileName string, device string) {
 	var handle *C.snd_pcm_t
 	var rc C.int
 
-	deviceCString := C.CString("plughw:2,0")
+	deviceCString := C.CString(device)
 	defer C.free(unsafe.Pointer(deviceCString))
 
 	rc = C.snd_pcm_open(&handle, deviceCString, C.SND_PCM_STREAM_CAPTURE, 0)

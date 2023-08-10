@@ -21,6 +21,7 @@ import (
 func main() {
 
 	var fileName string
+	var device string
 	var lb, ub int64
 	var lowerClassificationBoundary, upperClassificationBoundary int64
 
@@ -35,7 +36,7 @@ func main() {
 				Usage:   "Record audio file",
 				Action: func(cCtx *cli.Context) error {
 					fmt.Printf("Handling file name: %s\n", fileName)
-					record(fileName)
+					record(fileName, device)
 					return nil
 				},
 				Flags: []cli.Flag{
@@ -44,6 +45,13 @@ func main() {
 						Aliases:     []string{"f"},
 						Usage:       "File for operations with files",
 						Destination: &fileName,
+						Required:    true,
+					},
+					&cli.StringFlag{
+						Name:        "device",
+						Aliases:     []string{"d"},
+						Usage:       "Device to record from",
+						Destination: &device,
 						Required:    true,
 					},
 				},
