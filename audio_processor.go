@@ -109,7 +109,7 @@ exit:
 		//fmt.Printf("%v\n", rk)
 		values = append(values, sd.isSignal(signals[i]))
 	}
-	smoothOutSignal(values)
+	//smoothOutSignal(values)
 
 	return sig, res, values, linSpectra, nil
 }
