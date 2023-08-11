@@ -75,6 +75,25 @@ func main() {
 				},
 			},
 			{
+				Name:    "stream",
+				Aliases: []string{"r"},
+				Usage:   "Decode audio stream",
+				Action: func(cCtx *cli.Context) error {
+					stream(device)
+					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "device",
+						Aliases:     []string{"d"},
+						Usage:       "Device to record from",
+						Destination: &device,
+						Required:    true,
+						DefaultText: "default",
+					},
+				},
+			},
+			{
 				Name:    "detect",
 				Aliases: []string{"d"},
 				Usage:   "Detect morse code in a file",
