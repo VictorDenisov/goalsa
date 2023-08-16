@@ -1,22 +1,44 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
+	"unsafe"
+
+	log "github.com/sirupsen/logrus"
 )
 
-func stream(device string) {
+/*
+#cgo LDFLAGS: -lasound
+#include <alsa/asoundlib.h>
+#include <stdint.h>
+*/
+import "C"
+
+func stream(device string) error {
+	as, err := OpenAudioStream(device)
+	if err != nil {
+		return err
+	}
+	for {
+		v := as.Read()
+		fmt.Printf("%v ", v)
+	}
 
 }
 
 type AudioStream struct {
 	handle *C.snd_pcm_t
+	ch     chan int16
 }
 
 func OpenAudioStream(device string) (*AudioStream, error) {
-	as := &AudioStream{}
+	as := &AudioStream{nil, make(chan int16)}
 
 	var rc C.int
 
+	log.Tracef("Openning device: %v", device)
 	deviceCString := C.CString(device)
 	defer C.free(unsafe.Pointer(deviceCString))
 
@@ -44,19 +66,19 @@ func OpenAudioStream(device string) (*AudioStream, error) {
 	if rc < 0 {
 		return nil, fmt.Errorf("Couldn't set endian format")
 	}
-	rc = C.snd_pcm_hw_params_set_channels(handle, params, 1)
+	rc = C.snd_pcm_hw_params_set_channels(as.handle, params, 1)
 	if rc < 0 {
 		return nil, fmt.Errorf("Couldn't set channels")
 	}
 	var val C.uint = 44100
 	var dir C.int
-	rc = C.snd_pcm_hw_params_set_rate_near(handle, params, &val, &dir)
+	rc = C.snd_pcm_hw_params_set_rate_near(as.handle, params, &val, &dir)
 	if rc < 0 {
 		return nil, fmt.Errorf("Couldn't set rate")
 	}
 
-	var frames C.snd_pcm_uframes_t = 32
-	rc = C.snd_pcm_hw_params_set_period_size_near(handle, params, &frames, &dir)
+	var frames C.snd_pcm_uframes_t = 8192
+	rc = C.snd_pcm_hw_params_set_period_size_near(as.handle, params, &frames, &dir)
 	if rc < 0 {
 		return nil, fmt.Errorf("Couldn't set period size")
 	}
@@ -73,7 +95,7 @@ func OpenAudioStream(device string) (*AudioStream, error) {
 
 	var size C.snd_pcm_uframes_t
 	log.Tracef("Frames: %v\n", frames)
-	size = frames * 2
+	size = frames * 2 // Period - 2
 	buffer := make([]byte, size)
 	log.Tracef("Buffer len: %v", len(buffer))
 
@@ -81,7 +103,38 @@ func OpenAudioStream(device string) (*AudioStream, error) {
 	if rc < 0 {
 		log.Fatal("Couldn't get period time")
 	}
-	var loops C.long = 10_000_000 / C.long(val)
+
+	go func() {
+		for {
+			var rcl C.long
+			rcl = C.snd_pcm_readi(as.handle, unsafe.Pointer(&buffer[0]), frames)
+			log.Tracef("Received rcl: %v", rcl)
+			if rcl == -C.EPIPE {
+				fmt.Printf("Overrun occurred\n")
+				C.snd_pcm_prepare(as.handle)
+			} else if rcl < 0 {
+				fmt.Printf("Error from read: %v\n", C.snd_strerror(rc))
+			} else if rcl != C.long(frames) {
+				fmt.Printf("Short read, read %v frames\n", rc)
+			}
+			bf := bytes.NewReader(buffer)
+			var v int16
+			for {
+				err := binary.Read(bf, binary.LittleEndian, &v)
+				log.Tracef("Pushing to channel value: %v", v)
+				if err != nil {
+					break
+				}
+				as.ch <- v
+			}
+		}
+	}()
+
+	return as, nil
+}
+
+func (as *AudioStream) Read() int16 {
+	return <-as.ch
 }
 
 func (as *AudioStream) Close() {

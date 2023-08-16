@@ -19,16 +19,34 @@ import (
 //
 // Import raw data using audacity with the specified parameters
 func main() {
-
 	var fileName string
 	var device string
 	var lb, ub int64
 	var lowerClassificationBoundary, upperClassificationBoundary int64
+	var logLevel string
 
 	app := &cli.App{
 		Name:                 "cw-server",
 		Usage:                "Listen and decode cw",
 		EnableBashCompletion: true,
+		Before: func(cCtx *cli.Context) error {
+			ll, err := log.ParseLevel(logLevel)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Setting log level: %v\n", ll)
+			log.SetLevel(ll)
+			return nil
+		},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "log-level",
+				Aliases:     []string{"l"},
+				Usage:       "Log level",
+				Destination: &logLevel,
+				Required:    false,
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Name:    "record",
@@ -76,11 +94,10 @@ func main() {
 			},
 			{
 				Name:    "stream",
-				Aliases: []string{"r"},
+				Aliases: []string{"s"},
 				Usage:   "Decode audio stream",
 				Action: func(cCtx *cli.Context) error {
-					stream(device)
-					return nil
+					return stream(device)
 				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{
