@@ -16,14 +16,27 @@ import (
 */
 import "C"
 
+type Window struct {
+	a []int16
+}
+
+func NewWindow() *Window {
+	return &Window{make([]int16, 0)}
+}
+
+func (w *Window) Add(v int16) {
+	w.a = append(w.a, v)
+}
+
 func stream(device string) error {
 	as, err := OpenAudioStream(device)
 	if err != nil {
 		return err
 	}
+	w := NewWindow()
 	for {
 		v := as.Read()
-		fmt.Printf("%v ", v)
+		w.Add(v)
 	}
 
 }
