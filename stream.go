@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/mjibson/go-dsp/fft"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -146,6 +147,10 @@ func OpenAudioStream(device string) (*AudioStream, error) {
 	return as, nil
 }
 
+func (as *AudioStream) GetChan() chan int16 {
+	return as.ch
+}
+
 func (as *AudioStream) Read() int16 {
 	return <-as.ch
 }
@@ -153,4 +158,47 @@ func (as *AudioStream) Read() int16 {
 func (as *AudioStream) Close() {
 	C.snd_pcm_drain(as.handle)
 	C.snd_pcm_close(as.handle)
+}
+
+func filterSignal(in chan int16) (out chan []float64) {
+	out = make(chan []float64)
+	filter := NewBpFilter(200, 7.0/441, 30.0/441, 441)
+	go func() {
+		for {
+			buf := make([]float64, 441)
+			for i := 0; i < 441; i++ {
+				var v int16
+				v = <-in
+				buf[i] = float64(v)
+			}
+			buf = filter.FilterBuf(buf)
+			out <- buf
+		}
+	}()
+	return out
+}
+
+func produceSpectra(in chan []float64) (out chan []float64) {
+	out = make(chan []float64)
+	go func() {
+		for {
+			buf := <-in
+			hann(buf)
+			rawSpectrum := ToAbs(fft.FFTReal(buf))
+			out <- rawSpectrum[0:222]
+		}
+	}()
+	return out
+}
+
+func decode(ch chan []float64) (out chan string) {
+	spectra := make([][]float64)
+	sum := make([]float64, m)
+	n := 0
+	for {
+		sp := <-ch
+		spectra := append(spectra, sp)
+		n++
+		sumV(sum, sp)
+	}
 }
