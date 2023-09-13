@@ -192,7 +192,8 @@ func produceSpectra(in chan []float64) (out chan []float64) {
 }
 
 func decode(ch chan []float64) (out chan string) {
-	spectra := make([][]float64)
+	m := 223
+	spectra := make([][]float64, 0)
 	sum := make([]float64, m)
 	n := 0
 	for {
@@ -200,5 +201,6 @@ func decode(ch chan []float64) (out chan string) {
 		spectra := append(spectra, sp)
 		n++
 		sumV(sum, sp)
+		fmt.Printf("%v\n", spectra)
 	}
 }

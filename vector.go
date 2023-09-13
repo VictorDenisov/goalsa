@@ -23,5 +23,12 @@ func divNVS(dst []float64, s float64) (res []float64) {
 	return res
 }
 
-func maxV(v []float64) float64 {
+func maxV(v []float64) (r float64) {
+	r = v[0]
+	for i := 1; i < len(v); i++ {
+		if r > v[i] {
+			r = v[i]
+		}
+	}
+	return r
 }
