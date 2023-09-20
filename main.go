@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -97,7 +98,7 @@ func main() {
 				Aliases: []string{"s"},
 				Usage:   "Decode audio stream",
 				Action: func(cCtx *cli.Context) error {
-					return stream(device)
+					return stream(context.Background(), device)
 				},
 				Flags: []cli.Flag{
 					&cli.StringFlag{

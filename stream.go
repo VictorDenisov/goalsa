@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"unsafe"
@@ -29,17 +30,22 @@ func (w *Window) Add(v int16) {
 	w.a = append(w.a, v)
 }
 
-func stream(device string) error {
+func stream(ctx context.Context, device string) error {
 	as, err := OpenAudioStream(device)
 	if err != nil {
 		return err
 	}
-	w := NewWindow()
+	rawChan := as.GetChan()
+	filteredChan := filterSignal(rawChan)
+	spectraChan := produceSpectra(filteredChan)
+	textChan := decode(spectraChan)
 	for {
-		v := as.Read()
-		w.Add(v)
+		select {
+		case <-ctx.Done():
+			return nil
+		case _ = <-textChan:
+		}
 	}
-
 }
 
 type AudioStream struct {
@@ -192,7 +198,7 @@ func produceSpectra(in chan []float64) (out chan []float64) {
 }
 
 func decode(ch chan []float64) (out chan string) {
-	m := 223
+	m := 222
 	spectra := make([][]float64, 0)
 	sum := make([]float64, m)
 	n := 0
