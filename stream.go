@@ -207,6 +207,7 @@ func decode(ch chan []float64) (out chan string) {
 		spectra := append(spectra, sp)
 		n++
 		sumV(sum, sp)
-		fmt.Printf("%v\n", spectra)
+		freq, _ := calculateSignificantFrequency(spectra)
+		fmt.Printf("%v\n", freq)
 	}
 }
