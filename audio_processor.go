@@ -76,10 +76,7 @@ exit:
 	significantFrequency, err := calculateSignificantFrequency(spectra)
 	fmt.Printf("Significant frequency result: %v, %v\n", significantFrequency, err)
 
-	signals := make([]float64, len(spectra))
-	for i := 0; i < len(spectra); i++ {
-		signals[i] = spectra[i][significantFrequency]
-	}
+	signals := extractFrequency(spectra, significantFrequency)
 	//signals = signals[10:len(signals)]
 	//sort.Float64s(signals)
 	/*
@@ -342,4 +339,12 @@ func calculateSignificantFrequency(spectra [][]float64) (int, error) {
 		}
 	}
 	return r, nil
+}
+
+func extractFrequency(spectra [][]float64, frequency int) []float64 {
+	signals := make([]float64, len(spectra))
+	for i := 0; i < len(spectra); i++ {
+		signals[i] = spectra[i][frequency]
+	}
+	return signals
 }
