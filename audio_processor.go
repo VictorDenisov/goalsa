@@ -18,6 +18,45 @@ type Range struct {
 	lb, ub int64
 }
 
+func correlateFile(name string) {
+	sig := make([]float64, 0)
+	res := make([]float64, 0)
+	filter := NewBpFilter(200, 7.0/441, 30.0/441, 441)
+
+	file, err := os.Open(name)
+	if err != nil {
+		fmt.Printf("Failed to open file: %v\n", err)
+		return
+	}
+	defer file.Close()
+	spectra := make([][]float64, 0)
+	for pieceNum := int64(0); ; pieceNum++ {
+		buf := make([]float64, 441)
+		for i := 0; i < 441; i++ {
+			var v int16
+			err := binary.Read(file, binary.LittleEndian, &v)
+			if err != nil {
+				goto exit
+			}
+			buf[i] = float64(v)
+		}
+		sig = append(sig, buf...)
+		buf = filter.FilterBuf(buf)
+		res = append(res, buf...)
+		hann(buf)
+		rawSpectrum := ToAbs(fft.FFTReal(buf))
+		spectra = append(spectra, rawSpectrum[0:222])
+	}
+exit:
+	matr := correlationMatrix(spectra)
+	for i := 0; i < len(matr); i++ {
+		for j := 0; j < len(matr[i]); j++ {
+			fmt.Printf("%v ", matr[i][j])
+		}
+		fmt.Printf("\n")
+	}
+}
+
 func processFile(name string, rng *Range, classRng *Range) (sig []float64, res []float64, values []bool, linSpectra []float64, err error) {
 
 	values = make([]bool, 0)

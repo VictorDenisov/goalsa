@@ -477,3 +477,26 @@ func segmentMax(seg []float64) (mx float64, id int) {
 	}
 	return mx, id
 }
+
+func correlationMatrix(spectra [][]float64) (res [][]float64) {
+	m := len(spectra[0])
+	res = make([][]float64, m)
+	for i := 0; i < m; i++ {
+		res[i] = make([]float64, m)
+	}
+	for a := 0; a < m; a++ {
+		for b := 0; b < m; b++ {
+			var sa, sb, sqa, sqb, s float64
+			n := len(spectra)
+			for i := 0; i < n; i++ {
+				sa += spectra[i][a]
+				sb += spectra[i][b]
+				sqa += spectra[i][a] * spectra[i][a]
+				sqb += spectra[i][b] * spectra[i][b]
+				s += spectra[i][a] * spectra[i][b]
+			}
+			res[a][b] = (float64(n)*s - sa*sb) / (float64(n)*sqa - sa*sa) / (float64(n)*sqb - sb*sb)
+		}
+	}
+	return res
+}

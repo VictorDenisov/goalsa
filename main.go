@@ -94,6 +94,24 @@ func main() {
 				},
 			},
 			{
+				Name:    "correlation",
+				Aliases: []string{"c"},
+				Action: func(cCtx *cli.Context) error {
+					fmt.Printf("Correlating file name: %s\n", fileName)
+					correlateFile(fileName)
+					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "file",
+						Aliases:     []string{"f"},
+						Usage:       "File to correlate",
+						Destination: &fileName,
+						Required:    true,
+					},
+				},
+			},
+			{
 				Name:    "stream",
 				Aliases: []string{"s"},
 				Usage:   "Decode audio stream",
