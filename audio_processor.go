@@ -51,7 +51,7 @@ exit:
 	matr := correlationMatrix(spectra)
 	for i := 0; i < len(matr); i++ {
 		for j := 0; j < len(matr[i]); j++ {
-			fmt.Printf("%v ", matr[i][j])
+			fmt.Printf("%0.2f ", matr[i][j])
 		}
 		fmt.Printf("\n")
 	}
