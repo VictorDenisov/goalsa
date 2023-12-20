@@ -368,9 +368,6 @@ func calculateSignificantFrequency(spectra [][]float64) (int, error) {
 			sum[j] += spectra[i][j]
 		}
 	}
-	for j := 0; j < m; j++ {
-		sum[j] /= float64(n)
-	}
 	r := 0
 	for j := 1; j < m; j++ {
 		if sum[j] > sum[r] {
