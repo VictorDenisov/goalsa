@@ -168,11 +168,11 @@ func (as *AudioStream) Close() {
 
 func filterSignal(in chan int16) (out chan []float64) {
 	out = make(chan []float64)
-	filter := NewBpFilter(200, 7.0/441, 30.0/441, 441)
+	filter := NewBpFilter(200, 7.0/fragmentSize, 30.0/fragmentSize, fragmentSize)
 	go func() {
 		for {
-			buf := make([]float64, 441)
-			for i := 0; i < 441; i++ {
+			buf := make([]float64, fragmentSize)
+			for i := 0; i < fragmentSize; i++ {
 				var v int16
 				v = <-in
 				buf[i] = float64(v)

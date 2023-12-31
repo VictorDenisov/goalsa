@@ -14,6 +14,8 @@ import (
 	"github.com/mjibson/go-dsp/fft"
 )
 
+const fragmentSize = 441
+
 type Range struct {
 	lb, ub int64
 }
@@ -21,7 +23,7 @@ type Range struct {
 func correlateFile(name string) {
 	sig := make([]float64, 0)
 	res := make([]float64, 0)
-	filter := NewBpFilter(200, 7.0/441, 30.0/441, 441)
+	filter := NewBpFilter(200, 7.0/fragmentSize, 30.0/fragmentSize, fragmentSize)
 
 	file, err := os.Open(name)
 	if err != nil {
@@ -31,8 +33,8 @@ func correlateFile(name string) {
 	defer file.Close()
 	spectra := make([][]float64, 0)
 	for pieceNum := int64(0); ; pieceNum++ {
-		buf := make([]float64, 441)
-		for i := 0; i < 441; i++ {
+		buf := make([]float64, fragmentSize)
+		for i := 0; i < fragmentSize; i++ {
 			var v int16
 			err := binary.Read(file, binary.LittleEndian, &v)
 			if err != nil {
@@ -62,7 +64,7 @@ func processFile(name string, rng *Range, classRng *Range) (sig []float64, res [
 	values = make([]bool, 0)
 	linSpectra = make([]float64, 0)
 
-	filter := NewBpFilter(200, 7.0/441, 30.0/441, 441)
+	filter := NewBpFilter(200, 7.0/fragmentSize, 30.0/fragmentSize, fragmentSize)
 
 	file, err := os.Open(name)
 	if err != nil {
@@ -74,8 +76,8 @@ func processFile(name string, rng *Range, classRng *Range) (sig []float64, res [
 
 	spectra := make([][]float64, 0)
 	for pieceNum := int64(0); ; pieceNum++ {
-		buf := make([]float64, 441)
-		for i := 0; i < 441; i++ {
+		buf := make([]float64, fragmentSize)
+		for i := 0; i < fragmentSize; i++ {
 			var v int16
 			err := binary.Read(file, binary.LittleEndian, &v)
 			if err != nil {
@@ -88,7 +90,7 @@ func processFile(name string, rng *Range, classRng *Range) (sig []float64, res [
 		res = append(res, buf...)
 		hann(buf)
 		rawSpectrum := ToAbs(fft.FFTReal(buf))
-		spectra = append(spectra, rawSpectrum[0:222])
+		spectra = append(spectra, rawSpectrum[0:fragmentSize/2+2])
 		linSpectra = append(linSpectra, rawSpectrum...)
 		if rng != nil && pieceNum > rng.lb && pieceNum < rng.ub {
 			fn := fmt.Sprintf("%d.html", pieceNum)
@@ -190,12 +192,12 @@ func processWhole() {
 	buf, _ := readFile("short.wav")
 	drawChart("signal.html", buf)
 
-	kernel := dsputils.ZeroPadF(windowSincKernelHp(200, 2.0/441), 200+len(buf))
+	kernel := dsputils.ZeroPadF(windowSincKernelHp(200, 2.0/fragmentSize), 200+len(buf))
 	buf = dsputils.ZeroPadF(buf, 200+len(buf))
 	filtered := ToReal(fft.Convolve(dsputils.ToComplex(buf), dsputils.ToComplex(kernel)))
 
 	buf = filtered
-	kernel = dsputils.ZeroPadF(windowSincKernelHp(200, 7.0/441), 200+len(buf))
+	kernel = dsputils.ZeroPadF(windowSincKernelHp(200, 7.0/fragmentSize), 200+len(buf))
 	buf = dsputils.ZeroPadF(buf, 200+len(buf))
 	filtered = ToReal(fft.Convolve(dsputils.ToComplex(buf), dsputils.ToComplex(kernel)))
 	drawChart("filtered.html", filtered)
@@ -207,9 +209,9 @@ func processWhole() {
 func drawCut(cut []float64) {
 	drawChart("cut.html", cut)
 
-	for i := 0; i < len(cut)/441; i++ {
+	for i := 0; i < len(cut)/fragmentSize; i++ {
 		fileName := fmt.Sprintf("%d.html", i)
-		segment := cut[i*441 : (i+1)*441]
+		segment := cut[i*fragmentSize : (i+1)*fragmentSize]
 		hann(segment)
 		drawChart(fileName, segment)
 		spectrum := ToAbs(fft.FFTReal(segment))
