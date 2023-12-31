@@ -8,6 +8,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/urfave/cli/v2 v2.25.1
 	github.com/veandco/go-sdl2 v0.4.35
+	gonum.org/v1/gonum v0.14.0
 )
 
 require (
