@@ -73,9 +73,10 @@ func drawSound(audioFile string) {
 
 	var windowSize WindowSize
 
-	var leftMouseButtonDown bool
+	var leftMouseButtonDown, rightMouseButtonDown bool
 	var mousePos sdl.Point
 	var clickOffset sdl.Point
+	var rightClickOffset sdl.Point
 
 	_, res, _, spectra, _ := processFile(
 		audioFile,
@@ -84,6 +85,11 @@ func drawSound(audioFile string) {
 	)
 	view := &SignalWindow{res, 0, 1}
 	spectraWindow := &SignalWindow{spectra, 0, 1}
+	selectedBlocksLen := len(res) / fragmentSize
+	if len(res)%fragmentSize > 0 {
+		selectedBlocksLen++
+	}
+	selectedBlocks := make([]bool, selectedBlocksLen)
 	/*
 		buf, err := readFileData(audioFile)
 		if err != nil {
@@ -168,11 +174,21 @@ outer:
 						leftMouseButtonDown = false
 						lastOffset = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*view.scaleFactor
 					}
+					if rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
+						rightMouseButtonDown = false
+					}
 				} else if e.Type == sdl.MOUSEBUTTONDOWN {
 					if !leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
 						leftMouseButtonDown = true
 						clickOffset.X = mousePos.X
 						clickOffset.Y = mousePos.Y
+					}
+					if !rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
+						rightMouseButtonDown = true
+						rightClickOffset.X = mousePos.X
+						rightClickOffset.Y = mousePos.Y
+						selectedBlock := (int(rightClickOffset.X)*view.scaleFactor + view.start) / fragmentSize
+						selectedBlocks[selectedBlock] = true
 					}
 				}
 			}
