@@ -94,6 +94,24 @@ func main() {
 				},
 			},
 			{
+				Name:    "watch",
+				Aliases: []string{"w"},
+				Action: func(cCtx *cli.Context) error {
+					fmt.Printf("Capturing sound and drawing.\n")
+					watchSound()
+					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "device",
+						Aliases:     []string{"d"},
+						Usage:       "Device to record from",
+						Destination: &device,
+						Required:    true,
+					},
+				},
+			},
+			{
 				Name:    "correlation",
 				Aliases: []string{"c"},
 				Action: func(cCtx *cli.Context) error {
