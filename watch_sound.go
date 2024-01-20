@@ -25,6 +25,14 @@ func watchSound() {
 		panic(err)
 	}
 	defer renderer.Destroy()
+	renderer.SetDrawColor(242, 242, 242, 255)
+	renderer.Clear()
+	renderer.Present()
+
+	renderer.SetDrawColor(0, 255, 0, 255)
+	rect := &sdl.Rect{0, 0, 80, 200}
+	renderer.FillRect(rect)
+	renderer.Present()
 outer:
 	for {
 		for event := sdl.WaitEvent(); event != nil; event = sdl.WaitEvent() {
@@ -41,6 +49,10 @@ outer:
 
 				renderer.SetDrawColor(242, 242, 242, 255)
 				renderer.Clear()
+				renderer.Present()
+				renderer.SetDrawColor(0, 255, 0, 255)
+				rect := &sdl.Rect{0, 0, 80, 80}
+				renderer.FillRect(rect)
 				renderer.Present()
 			}
 		}
