@@ -54,7 +54,7 @@ type AudioStream struct {
 }
 
 func OpenAudioStream(device string) (*AudioStream, error) {
-	as := &AudioStream{nil, make(chan int16)}
+	as := &AudioStream{nil, make(chan int16, 2000)}
 
 	var rc C.int
 

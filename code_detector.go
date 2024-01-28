@@ -129,6 +129,13 @@ func abs(x int) int {
 	return x
 }
 
+func absInt16(x int16) int16 {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
 func classifyGaps(ds []Element) (ditGap int, charGap int, wordGap int) {
 	f, err := os.Create("classifyGaps.log")
 	if err != nil {
