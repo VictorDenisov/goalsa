@@ -9,6 +9,35 @@ import (
 
 var buffer []int16
 
+const compressionRate = 1000
+
+func compressor(ch chan int16) (r chan int16) {
+	r = make(chan int16, 20000)
+	go func() {
+		c := 0
+		v := int16(0)
+		for {
+			x := <-ch
+			v = max(v, x)
+			c++
+			if c == compressionRate {
+				c = 0
+				r <- v
+				v = 0
+			}
+		}
+	}()
+	return r
+}
+
+func max(x, y int16) int16 {
+	if x < y {
+		return y
+	} else {
+		return x
+	}
+}
+
 func watchSound() {
 	var windowSize WindowSize
 
@@ -45,14 +74,15 @@ func watchSound() {
 	}
 	defer audioStream.Close()
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	eventChan := eventListener()
+	ch := compressor(audioStream.GetChan())
+	//ch := audioStream.GetChan()
 outer:
 	for {
 		select {
 		case _ = <-ticker.C:
 			fmt.Printf("received ticker\n")
-			ch := audioStream.GetChan()
 		receiver:
 			for {
 				select {
