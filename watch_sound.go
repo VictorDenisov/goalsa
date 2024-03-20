@@ -9,7 +9,7 @@ import (
 
 var buffer []int16
 
-const compressionRate = 1000
+const compressionRate = 500
 
 func compressor(ch chan int16) (r chan int16) {
 	r = make(chan int16, 20000)
@@ -76,7 +76,8 @@ func watchSound() {
 
 	ticker := time.NewTicker(100 * time.Millisecond)
 	eventChan := eventListener()
-	ch := compressor(audioStream.GetChan())
+	//ch := filterSignalStream(compressor(audioStream.GetChan()))
+	ch := compressor(filterSignalStream(audioStream.GetChan()))
 	//ch := audioStream.GetChan()
 outer:
 	for {

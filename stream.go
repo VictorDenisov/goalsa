@@ -184,6 +184,26 @@ func filterSignal(in chan int16) (out chan []float64) {
 	return out
 }
 
+func filterSignalStream(in chan int16) (out chan int16) {
+	out = make(chan int16)
+	filter := NewBpFilter(200, 7.0/fragmentSize, 30.0/fragmentSize, fragmentSize)
+	go func() {
+		for {
+			buf := make([]float64, fragmentSize)
+			for i := 0; i < fragmentSize; i++ {
+				var v int16
+				v = <-in
+				buf[i] = float64(v)
+			}
+			buf = filter.FilterBuf(buf)
+			for i := 0; i < fragmentSize; i++ {
+				out <- int16(buf[i])
+			}
+		}
+	}()
+	return out
+}
+
 func produceSpectra(in chan []float64) (out chan []float64) {
 	out = make(chan []float64)
 	go func() {
