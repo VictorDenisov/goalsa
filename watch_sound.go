@@ -9,7 +9,9 @@ import (
 
 var buffer []int16
 
-const compressionRate = 500
+const maxBufLen = 1500
+
+const compressionRate = 512
 
 func compressor(ch chan int16) (r chan int16) {
 	r = make(chan int16, 20000)
@@ -90,8 +92,8 @@ outer:
 				case v := <-ch:
 					fmt.Printf("%d ", v)
 					buffer = append(buffer, v)
-					if len(buffer) > 1000 {
-						buffer = buffer[len(buffer)-1000 : len(buffer)]
+					if len(buffer) > maxBufLen {
+						buffer = buffer[len(buffer)-maxBufLen : len(buffer)]
 					}
 				default:
 					break receiver
@@ -113,13 +115,13 @@ outer:
 			renderer.Present()
 			renderer.SetDrawColor(0, 255, 0, 255)
 			for i := len(buffer) - 1; i > 0; i-- {
-				x := int32((len(buffer) - 1 - i) * barWidth * 2)
+				x := int32((len(buffer) - 1 - i) * barWidth)
 				if x+barWidth > windowSize.Width {
 					break
 				}
 				u := int32(buffer[i])
 				uh := int32(float64(windowSize.Height) / 4.0 * float64(u) / float64(mx))
-				rect := &sdl.Rect{x * barWidth * 2, zeroPosition - uh, barWidth, uh}
+				rect := &sdl.Rect{x * barWidth, zeroPosition - uh, barWidth, uh}
 				renderer.FillRect(rect)
 			}
 			renderer.Present()
