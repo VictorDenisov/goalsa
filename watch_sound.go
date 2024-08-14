@@ -13,38 +13,6 @@ const maxBufLen = 1500
 
 const compressionRate = 512
 
-func compressor(ch chan int16) (r chan int16) {
-	r = make(chan int16, 20000)
-	go func() {
-		c := 0
-		v := int16(0)
-		for {
-			x := <-ch
-			v = max(v, x)
-			c++
-			if c == compressionRate {
-				c = 0
-				r <- v
-				v = 0
-			}
-		}
-	}()
-	return r
-}
-
-func max(x, y int16) int16 {
-	if x < y {
-		return y
-	} else {
-		return x
-	}
-}
-
-func clearScreen(r *sdl.Renderer) {
-	r.SetDrawColor(242, 242, 242, 255)
-	r.Clear()
-}
-
 func watchSound() {
 	var windowSize WindowSize
 
@@ -162,4 +130,36 @@ func arrayMaximum(buffer []int16) int16 {
 	}
 
 	return mx
+}
+
+func max(x, y int16) int16 {
+	if x < y {
+		return y
+	} else {
+		return x
+	}
+}
+
+func clearScreen(r *sdl.Renderer) {
+	r.SetDrawColor(242, 242, 242, 255)
+	r.Clear()
+}
+
+func compressor(ch chan int16) (r chan int16) {
+	r = make(chan int16, 20000)
+	go func() {
+		c := 0
+		v := int16(0)
+		for {
+			x := <-ch
+			v = max(v, x)
+			c++
+			if c == compressionRate {
+				c = 0
+				r <- v
+				v = 0
+			}
+		}
+	}()
+	return r
 }
