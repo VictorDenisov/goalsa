@@ -100,13 +100,8 @@ outer:
 			}
 
 			fmt.Printf("\nPopulated audio stream. Buf size %d\n", len(buffer))
-			mx := int16(0)
+			mx := arrayMaximum(buffer)
 
-			for i := 0; i < len(buffer); i++ {
-				if mx < absInt16(buffer[i]) {
-					mx = absInt16(buffer[i])
-				}
-			}
 			fmt.Printf("Mx: %d\n", mx)
 			zeroPosition := windowSize.Height / 2
 
@@ -155,4 +150,16 @@ func eventListener() chan sdl.Event {
 		}
 	}()
 	return ch
+}
+
+func arrayMaximum(buffer []int16) int16 {
+	mx := int16(0)
+
+	for i := 0; i < len(buffer); i++ {
+		if mx < absInt16(buffer[i]) {
+			mx = absInt16(buffer[i])
+		}
+	}
+
+	return mx
 }
