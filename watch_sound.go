@@ -99,11 +99,11 @@ outer:
 				if e.Event == sdl.WINDOWEVENT_RESIZED {
 					windowSize.Width = e.Data1
 					windowSize.Height = e.Data2
+					clearScreen(renderer)
+					renderer.Present()
 				}
 				fmt.Printf("Handling window event\n")
 
-				clearScreen(renderer)
-				renderer.Present()
 			}
 		}
 
