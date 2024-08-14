@@ -43,7 +43,6 @@ func max(x, y int16) int16 {
 func clearScreen(r *sdl.Renderer) {
 	r.SetDrawColor(242, 242, 242, 255)
 	r.Clear()
-	r.Present()
 }
 
 func watchSound() {
@@ -68,6 +67,7 @@ func watchSound() {
 	}
 	defer renderer.Destroy()
 	clearScreen(renderer)
+	renderer.Present()
 
 	audioStream, err := OpenAudioStream("default")
 	if err != nil {
@@ -109,6 +109,7 @@ outer:
 			}
 			fmt.Printf("Mx: %d\n", mx)
 			zeroPosition := windowSize.Height / 2
+
 			clearScreen(renderer)
 
 			renderer.SetDrawColor(0, 255, 0, 255)
@@ -123,6 +124,7 @@ outer:
 				renderer.FillRect(rect)
 			}
 			renderer.Present()
+
 			fmt.Printf("Picture rendered\n")
 
 		case event := <-eventChan:
@@ -138,6 +140,7 @@ outer:
 				fmt.Printf("Handling window event\n")
 
 				clearScreen(renderer)
+				renderer.Present()
 			}
 		}
 
