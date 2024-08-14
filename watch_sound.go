@@ -40,6 +40,12 @@ func max(x, y int16) int16 {
 	}
 }
 
+func clearScreen(r *sdl.Renderer) {
+	r.SetDrawColor(242, 242, 242, 255)
+	r.Clear()
+	r.Present()
+}
+
 func watchSound() {
 	var windowSize WindowSize
 
@@ -49,7 +55,7 @@ func watchSound() {
 	}
 	defer sdl.Quit()
 
-	window, err := sdl.CreateWindow("test", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
+	window, err := sdl.CreateWindow("Realtime audio", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
 		800, 600, sdl.WINDOW_SHOWN|sdl.WINDOW_RESIZABLE)
 	if err != nil {
 		panic(err)
@@ -61,14 +67,7 @@ func watchSound() {
 		panic(err)
 	}
 	defer renderer.Destroy()
-	renderer.SetDrawColor(242, 242, 242, 255)
-	renderer.Clear()
-	renderer.Present()
-
-	renderer.SetDrawColor(0, 255, 0, 255)
-	rect := &sdl.Rect{0, 0, 80, 200}
-	renderer.FillRect(rect)
-	renderer.Present()
+	clearScreen(renderer)
 
 	audioStream, err := OpenAudioStream("default")
 	if err != nil {
@@ -110,9 +109,8 @@ outer:
 			}
 			fmt.Printf("Mx: %d\n", mx)
 			zeroPosition := windowSize.Height / 2
-			renderer.SetDrawColor(242, 242, 242, 255)
-			renderer.Clear()
-			renderer.Present()
+			clearScreen(renderer)
+
 			renderer.SetDrawColor(0, 255, 0, 255)
 			for i := len(buffer) - 1; i > 0; i-- {
 				x := int32((len(buffer) - 1 - i) * barWidth)
@@ -139,13 +137,7 @@ outer:
 				}
 				fmt.Printf("Handling window event\n")
 
-				renderer.SetDrawColor(242, 242, 242, 255)
-				renderer.Clear()
-				renderer.Present()
-				renderer.SetDrawColor(0, 255, 0, 255)
-				rect := &sdl.Rect{0, 0, 80, 80}
-				renderer.FillRect(rect)
-				renderer.Present()
+				clearScreen(renderer)
 			}
 		}
 
