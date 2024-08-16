@@ -66,7 +66,6 @@ func (sw *SignalWindow) Draw(zeroPosition int32, renderer *sdl.Renderer, windowS
 		rect := &sdl.Rect{x * barWidth * 2, zeroPosition - uh, barWidth, uh - lh}
 		renderer.FillRect(rect)
 	}
-	renderer.Present()
 }
 
 func drawSound(audioFile string) {
@@ -111,7 +110,6 @@ func drawSound(audioFile string) {
 	defer window.Destroy()
 
 	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
-	//renderer, err := sdl.CreateRenderer(window, -1, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -134,6 +132,7 @@ outer:
 
 				view.Draw(windowSize.Height/4, renderer, windowSize)
 				spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
+				renderer.Present()
 			case *sdl.MouseMotionEvent:
 				mousePos = sdl.Point{e.X, e.Y}
 				if leftMouseButtonDown {
@@ -152,6 +151,7 @@ outer:
 						spectraWindow.start = 0
 					}
 					spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
+					renderer.Present()
 				}
 
 			case *sdl.MouseWheelEvent:
@@ -169,6 +169,7 @@ outer:
 					spectraWindow.scaleFactor = 1
 				}
 				spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
+				renderer.Present()
 			case *sdl.MouseButtonEvent:
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
