@@ -14,7 +14,7 @@ import (
 	"github.com/mjibson/go-dsp/fft"
 )
 
-const fragmentSize = 441
+const fragmentSize = 512
 
 type Range struct {
 	lb, ub int64
