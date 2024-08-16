@@ -103,14 +103,15 @@ func drawSound(audioFile string) {
 	}
 	defer sdl.Quit()
 
-	window, err := sdl.CreateWindow("test", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
+	window, err := sdl.CreateWindow(audioFile, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
 		800, 600, sdl.WINDOW_SHOWN|sdl.WINDOW_RESIZABLE)
 	if err != nil {
 		panic(err)
 	}
 	defer window.Destroy()
 
-	renderer, err := sdl.CreateRenderer(window, -1, 0)
+	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
+	//renderer, err := sdl.CreateRenderer(window, -1, 0)
 	if err != nil {
 		panic(err)
 	}
