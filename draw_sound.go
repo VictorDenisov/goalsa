@@ -155,21 +155,27 @@ outer:
 				}
 
 			case *sdl.MouseWheelEvent:
-				renderer.SetDrawColor(242, 242, 242, 255)
-				renderer.Clear()
+				keyboardState := sdl.GetModState()
+				if keyboardState&sdl.KMOD_LSHIFT > 0 {
+					println("Shift is pressed")
+				} else {
+					renderer.SetDrawColor(242, 242, 242, 255)
+					renderer.Clear()
 
-				view.scaleFactor -= int(e.Y)
-				if view.scaleFactor < 1 {
-					view.scaleFactor = 1
-				}
-				view.Draw(windowSize.Height/4, renderer, windowSize)
+					view.scaleFactor -= int(e.Y)
+					if view.scaleFactor < 1 {
+						view.scaleFactor = 1
+					}
+					view.Draw(windowSize.Height/4, renderer, windowSize)
 
-				spectraWindow.scaleFactor -= int(e.Y)
-				if spectraWindow.scaleFactor < 1 {
-					spectraWindow.scaleFactor = 1
+					spectraWindow.scaleFactor -= int(e.Y)
+					if spectraWindow.scaleFactor < 1 {
+						spectraWindow.scaleFactor = 1
+					}
+					spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
+					renderer.Present()
 				}
-				spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
-				renderer.Present()
+
 			case *sdl.MouseButtonEvent:
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
