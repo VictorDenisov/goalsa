@@ -12,6 +12,11 @@ type WindowSize struct {
 	Width, Height int32
 }
 
+type AreaRect struct {
+	// upper left corner coordinates and width and height
+	x, y, w, h int32
+}
+
 type SignalWindow struct {
 	buf         []float64
 	start       int
@@ -68,6 +73,14 @@ func (sw *SignalWindow) Draw(zeroPosition int32, renderer *sdl.Renderer, windowS
 	}
 }
 
+type HeatMap struct {
+	buf [][]float64
+}
+
+func (hm *HeatMap) Draw(renderer *sdl.Renderer, area AreaRect, columnWidth int32) {
+	int32(float64(windowSize.Height) / 4.0)
+}
+
 func drawSound(audioFile string) {
 
 	var windowSize WindowSize
@@ -77,13 +90,13 @@ func drawSound(audioFile string) {
 	var clickOffset sdl.Point
 	var rightClickOffset sdl.Point
 
-	_, res, _, spectra, _ := processFile(
+	_, res, _, _, spectra, _ := processFile(
 		audioFile,
 		nil,
 		nil,
 	)
 	view := &SignalWindow{res, 0, 1}
-	spectraWindow := &SignalWindow{spectra, 0, 1}
+	spectraWindow := &HeatMap{spectra}
 	selectedBlocksLen := len(res) / fragmentSize
 	if len(res)%fragmentSize > 0 {
 		selectedBlocksLen++

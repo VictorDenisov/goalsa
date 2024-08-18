@@ -59,7 +59,7 @@ exit:
 	}
 }
 
-func processFile(name string, rng *Range, classRng *Range) (sig []float64, res []float64, values []bool, linSpectra []float64, err error) {
+func processFile(name string, rng *Range, classRng *Range) (sig []float64, res []float64, values []bool, linSpectra []float64, spectra [][]float64, err error) {
 
 	values = make([]bool, 0)
 	linSpectra = make([]float64, 0)
@@ -68,13 +68,13 @@ func processFile(name string, rng *Range, classRng *Range) (sig []float64, res [
 
 	file, err := os.Open(name)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	defer file.Close()
 	sig = make([]float64, 0)
 	res = make([]float64, 0)
 
-	spectra := make([][]float64, 0)
+	spectra = make([][]float64, 0)
 	for pieceNum := int64(0); ; pieceNum++ {
 		buf := make([]float64, fragmentSize)
 		for i := 0; i < fragmentSize; i++ {
@@ -149,7 +149,7 @@ exit:
 	}
 	//smoothOutSignal(values)
 
-	return sig, res, values, linSpectra, nil
+	return sig, res, values, linSpectra, spectra, nil
 }
 
 func smoothOutSignal(values []bool) {
