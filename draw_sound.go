@@ -162,13 +162,21 @@ outer:
 					renderer.SetDrawColor(242, 242, 242, 255)
 					renderer.Clear()
 
-					view.scaleFactor -= int(e.Y)
+					if int(e.Y) < 0 {
+						view.scaleFactor <<= int(-e.Y)
+					} else {
+						view.scaleFactor >>= int(e.Y)
+					}
 					if view.scaleFactor < 1 {
 						view.scaleFactor = 1
 					}
 					view.Draw(windowSize.Height/4, renderer, windowSize)
 
-					spectraWindow.scaleFactor -= int(e.Y)
+					if int(e.Y) < 0 {
+						spectraWindow.scaleFactor <<= int(-e.Y)
+					} else {
+						spectraWindow.scaleFactor >>= int(e.Y)
+					}
 					if spectraWindow.scaleFactor < 1 {
 						spectraWindow.scaleFactor = 1
 					}
