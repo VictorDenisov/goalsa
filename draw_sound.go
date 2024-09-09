@@ -74,11 +74,41 @@ func (sw *SignalWindow) Draw(zeroPosition int32, renderer *sdl.Renderer, windowS
 }
 
 type HeatMap struct {
-	buf [][]float64
+	buf         [][]float64
+	area        AreaRect
+	columnWidth int32
+	dx          int32
 }
 
-func (hm *HeatMap) Draw(renderer *sdl.Renderer, area AreaRect, columnWidth int32) {
-	int32(float64(windowSize.Height) / 4.0)
+func (this *HeatMap) Draw(renderer *sdl.Renderer) {
+	startI := dx / columnWidth
+	if dx%columnWidth > 0 {
+		startI++
+	}
+	firstFullStartWidth := (this.area.w - dx%columnWidth)
+	columnCount := firstFullStartWidth / columnWidth
+	if firstFullStartWidth%columnWidth > 0 {
+		columnCount++
+	}
+	cellHeight := this.area.h / len(buf[0])
+
+	maxValue := buf[0][0]
+	for i := startI; i < startI+columnCount; i++ {
+		for j := 0; j < len(buf[i]); j++ {
+			if maxValue < buf[i][j] {
+				maxValue = buf[i][j]
+			}
+		}
+	}
+
+	for i := 0; i < columnCount; i++ {
+		for j := 0; j < len(buf[i]); j++ {
+			normalizedValue := buf[i][j] / maxValue * 255
+			rect := &sdl.Rect(i*columnWidth, j*cellHeight, columnWidth, cellHeight)
+			renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
+			rendere.FillRect(rect)
+		}
+	}
 }
 
 func drawSound(audioFile string) {
@@ -138,13 +168,16 @@ outer:
 				if e.Event == sdl.WINDOWEVENT_RESIZED {
 					windowSize.Width = e.Data1
 					windowSize.Height = e.Data2
+					spectraWindow.area.y = windowSize.Height / 4 * 3
+					spectraWindow.area.w = windowSize.Width
+					spectraWindow.area.h = windowSize.Height
 
 				}
 				renderer.SetDrawColor(242, 242, 242, 255)
 				renderer.Clear()
 
 				view.Draw(windowSize.Height/4, renderer, windowSize)
-				spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
+				spectraWindow.Draw(renderer)
 				renderer.Present()
 			case *sdl.MouseMotionEvent:
 				mousePos = sdl.Point{e.X, e.Y}
@@ -163,7 +196,7 @@ outer:
 					if spectraWindow.start < 0 {
 						spectraWindow.start = 0
 					}
-					spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
+					spectraWindow.Draw(renderer)
 					renderer.Present()
 				}
 
