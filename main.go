@@ -153,7 +153,7 @@ func main() {
 				Usage:   "Detect morse code in a file",
 				Action: func(cCtx *cli.Context) error {
 					fmt.Printf("Handling file name: %s\n", fileName)
-					_, res, values, _, _ := processFile(
+					_, res, values, _, _, _ := processFile(
 						fileName,
 						&Range{lb, ub},
 						&Range{lowerClassificationBoundary, upperClassificationBoundary},

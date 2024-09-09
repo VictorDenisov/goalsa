@@ -81,32 +81,32 @@ type HeatMap struct {
 }
 
 func (this *HeatMap) Draw(renderer *sdl.Renderer) {
-	startI := dx / columnWidth
-	if dx%columnWidth > 0 {
+	startI := this.dx / this.columnWidth
+	if this.dx%this.columnWidth > 0 {
 		startI++
 	}
-	firstFullStartWidth := (this.area.w - dx%columnWidth)
-	columnCount := firstFullStartWidth / columnWidth
-	if firstFullStartWidth%columnWidth > 0 {
+	firstFullStartWidth := (this.area.w - this.dx%this.columnWidth)
+	columnCount := firstFullStartWidth / this.columnWidth
+	if firstFullStartWidth%this.columnWidth > 0 {
 		columnCount++
 	}
-	cellHeight := this.area.h / len(buf[0])
+	cellHeight := this.area.h / int32(len(this.buf[0]))
 
-	maxValue := buf[0][0]
+	maxValue := this.buf[0][0]
 	for i := startI; i < startI+columnCount; i++ {
-		for j := 0; j < len(buf[i]); j++ {
-			if maxValue < buf[i][j] {
-				maxValue = buf[i][j]
+		for j := 0; j < len(this.buf[i]); j++ {
+			if maxValue < this.buf[i][j] {
+				maxValue = this.buf[i][j]
 			}
 		}
 	}
 
-	for i := 0; i < columnCount; i++ {
-		for j := 0; j < len(buf[i]); j++ {
-			normalizedValue := buf[i][j] / maxValue * 255
-			rect := &sdl.Rect(i*columnWidth, j*cellHeight, columnWidth, cellHeight)
+	for i := int32(0); i < columnCount; i++ {
+		for j := int32(0); j < int32(len(this.buf[i])); j++ {
+			normalizedValue := uint8(this.buf[i][j] / maxValue * 255)
+			rect := &sdl.Rect{i * this.columnWidth, j * cellHeight, this.columnWidth, cellHeight}
 			renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
-			rendere.FillRect(rect)
+			renderer.FillRect(rect)
 		}
 	}
 }
@@ -126,7 +126,7 @@ func drawSound(audioFile string) {
 		nil,
 	)
 	view := &SignalWindow{res, 0, 1}
-	spectraWindow := &HeatMap{spectra}
+	spectraWindow := &HeatMap{spectra, AreaRect{0, 0, 0, 0}, fragmentSize, 0}
 	selectedBlocksLen := len(res) / fragmentSize
 	if len(res)%fragmentSize > 0 {
 		selectedBlocksLen++
@@ -192,9 +192,9 @@ outer:
 					}
 					view.Draw(windowSize.Height/4, renderer, windowSize)
 
-					spectraWindow.start = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*spectraWindow.scaleFactor
-					if spectraWindow.start < 0 {
-						spectraWindow.start = 0
+					spectraWindow.dx = int32(lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*view.scaleFactor)
+					if spectraWindow.dx < 0 {
+						spectraWindow.dx = 0
 					}
 					spectraWindow.Draw(renderer)
 					renderer.Present()
@@ -218,15 +218,9 @@ outer:
 					}
 					view.Draw(windowSize.Height/4, renderer, windowSize)
 
-					if int(e.Y) < 0 {
-						spectraWindow.scaleFactor <<= int(-e.Y)
-					} else {
-						spectraWindow.scaleFactor >>= int(e.Y)
-					}
-					if spectraWindow.scaleFactor < 1 {
-						spectraWindow.scaleFactor = 1
-					}
-					spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
+					spectraWindow.columnWidth = int32(fragmentSize) / int32(view.scaleFactor)
+
+					spectraWindow.Draw(renderer)
 					renderer.Present()
 				}
 
