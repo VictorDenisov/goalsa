@@ -104,7 +104,7 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 	for i := int32(0); i < columnCount; i++ {
 		for j := int32(0); j < int32(len(this.buf[i])); j++ {
 			normalizedValue := uint8(this.buf[i][j] / maxValue * 255)
-			rect := &sdl.Rect{i * this.columnWidth, j * cellHeight, this.columnWidth, cellHeight}
+			rect := &sdl.Rect{this.area.x + i*this.columnWidth, this.area.y + j*cellHeight, this.columnWidth, cellHeight}
 			renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
 			renderer.FillRect(rect)
 		}
@@ -168,9 +168,9 @@ outer:
 				if e.Event == sdl.WINDOWEVENT_RESIZED {
 					windowSize.Width = e.Data1
 					windowSize.Height = e.Data2
-					spectraWindow.area.y = windowSize.Height / 4 * 3
+					spectraWindow.area.y = windowSize.Height / 2
 					spectraWindow.area.w = windowSize.Width
-					spectraWindow.area.h = windowSize.Height
+					spectraWindow.area.h = windowSize.Height / 2
 
 				}
 				renderer.SetDrawColor(242, 242, 242, 255)
