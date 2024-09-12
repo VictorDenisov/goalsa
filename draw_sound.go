@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 	"os"
 
@@ -68,7 +69,7 @@ func (sw *SignalWindow) Draw(zeroPosition int32, renderer *sdl.Renderer, windowS
 		lh := int32(float64(windowSize.Height) / 4.0 * float64(l) / float64(mx))
 		uh := int32(float64(windowSize.Height) / 4.0 * float64(u) / float64(mx))
 		x := int32(i - lb)
-		rect := &sdl.Rect{x * barWidth * 2, zeroPosition - uh, barWidth, uh - lh}
+		rect := &sdl.Rect{x * barWidth, zeroPosition - uh, barWidth, uh - lh}
 		renderer.FillRect(rect)
 	}
 }
@@ -85,12 +86,16 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 	if this.dx%this.columnWidth > 0 {
 		startI++
 	}
+	fmt.Printf("ColumnWidth: %v\n", this.columnWidth)
+	fmt.Printf("area width: %v\n", this.area.w)
+	fmt.Printf("area height: %v\n", this.area.h)
 	firstFullStartWidth := (this.area.w - this.dx%this.columnWidth)
 	columnCount := firstFullStartWidth / this.columnWidth
 	if firstFullStartWidth%this.columnWidth > 0 {
 		columnCount++
 	}
 	cellHeight := this.area.h / int32(len(this.buf[0]))
+	fmt.Printf("cell height: %v\n", cellHeight)
 
 	maxValue := this.buf[0][0]
 	for i := startI; i < startI+columnCount; i++ {
@@ -219,6 +224,8 @@ outer:
 					view.Draw(windowSize.Height/4, renderer, windowSize)
 
 					spectraWindow.columnWidth = int32(fragmentSize) / int32(view.scaleFactor)
+
+					fmt.Printf("Scale factor: %v\n", int32(view.scaleFactor))
 
 					spectraWindow.Draw(renderer)
 					renderer.Present()
