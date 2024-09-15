@@ -86,18 +86,28 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 	if this.dx%this.columnWidth > 0 {
 		startI++
 	}
+	fmt.Printf("StartI: %v\n", startI)
+	shift := int32(0)
+	if this.dx%this.columnWidth > 0 {
+		shift = this.columnWidth - this.dx%this.columnWidth
+	}
 	fmt.Printf("ColumnWidth: %v\n", this.columnWidth)
 	fmt.Printf("area width: %v\n", this.area.w)
 	fmt.Printf("area height: %v\n", this.area.h)
-	firstFullStartWidth := (this.area.w - this.dx%this.columnWidth)
-	columnCount := firstFullStartWidth / this.columnWidth
-	if firstFullStartWidth%this.columnWidth > 0 {
-		columnCount++
-	}
+	//firstFullStartWidth := (this.area.w - shift - (this.area.w-shift)%this.columnWidth)
+	columnCount := (this.area.w - shift) / this.columnWidth
+	/*
+		if firstFullStartWidth%this.columnWidth > 0 {
+			columnCount++
+		}
+	*/
+
+	fmt.Printf("Column count: %v\n", columnCount)
 	cellHeight := this.area.h / int32(len(this.buf[0]))
 	fmt.Printf("cell height: %v\n", cellHeight)
 
-	maxValue := this.buf[0][0]
+	maxValue := this.buf[startI][0]
+	fmt.Printf("Len: %v\n", len(this.buf[startI]))
 	for i := startI; i < startI+columnCount; i++ {
 		for j := 0; j < len(this.buf[i]); j++ {
 			if maxValue < this.buf[i][j] {
@@ -105,11 +115,12 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 			}
 		}
 	}
+	fmt.Printf("Max value: %v\n", maxValue)
 
-	for i := int32(0); i < columnCount; i++ {
+	for i := int32(startI); i < startI+columnCount; i++ {
 		for j := int32(0); j < int32(len(this.buf[i])); j++ {
 			normalizedValue := uint8(this.buf[i][j] / maxValue * 255)
-			rect := &sdl.Rect{this.area.x + i*this.columnWidth, this.area.y + j*cellHeight, this.columnWidth, cellHeight}
+			rect := &sdl.Rect{this.area.x + shift + (i-startI)*this.columnWidth, this.area.y + j*cellHeight, this.columnWidth, cellHeight}
 			renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
 			renderer.FillRect(rect)
 		}
@@ -191,13 +202,13 @@ outer:
 					renderer.SetDrawColor(242, 242, 242, 255)
 					renderer.Clear()
 
-					view.start = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*view.scaleFactor
+					view.start = lastOffset - int(mousePos.X-clickOffset.X)/barWidth*view.scaleFactor
 					if view.start < 0 {
 						view.start = 0
 					}
 					view.Draw(windowSize.Height/4, renderer, windowSize)
 
-					spectraWindow.dx = int32(lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*view.scaleFactor)
+					spectraWindow.dx = int32(view.start)
 					if spectraWindow.dx < 0 {
 						spectraWindow.dx = 0
 					}
@@ -235,7 +246,7 @@ outer:
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
 						leftMouseButtonDown = false
-						lastOffset = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*view.scaleFactor
+						lastOffset = lastOffset - int(mousePos.X-clickOffset.X)/barWidth*view.scaleFactor
 					}
 					if rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
 						rightMouseButtonDown = false
