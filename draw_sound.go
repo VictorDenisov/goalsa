@@ -24,6 +24,13 @@ type SignalWindow struct {
 	scaleFactor int
 }
 
+func (this *SignalWindow) Shift(d int) {
+	this.start = d / barWidth * this.scaleFactor
+	if this.start < 0 {
+		this.start = 0
+	}
+}
+
 func (sw *SignalWindow) Get(v int) (l, u float64) {
 	l = 0
 	u = 0
@@ -213,10 +220,7 @@ outer:
 					renderer.SetDrawColor(242, 242, 242, 255)
 					renderer.Clear()
 
-					view.start = (lastOffset - int(mousePos.X-clickOffset.X)) / barWidth * view.scaleFactor
-					if view.start < 0 {
-						view.start = 0
-					}
+					view.Shift(lastOffset - int(mousePos.X-clickOffset.X))
 					view.Draw(windowSize.Height/4, renderer, windowSize)
 
 					spectraWindow.dx = int32(view.start)
