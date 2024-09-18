@@ -25,7 +25,9 @@ type SignalWindow struct {
 }
 
 func (this *SignalWindow) Shift(d int) {
-	this.start = this.start - d/barWidth*this.scaleFactor
+	fmt.Printf("Shift by: %v\n", d)
+	fmt.Printf("Scale factor: %v\n", this.scaleFactor)
+	this.start = this.start + d/barWidth*this.scaleFactor
 	if this.start < 0 {
 		this.start = 0
 	}
@@ -34,8 +36,8 @@ func (this *SignalWindow) Shift(d int) {
 func (sw *SignalWindow) Get(v int) (l, u float64) {
 	l = 0
 	u = 0
-	start := sw.start + v*sw.scaleFactor
-	end := sw.start + (v+1)*sw.scaleFactor
+	start := v * sw.scaleFactor
+	end := (v + 1) * sw.scaleFactor
 	if end < start {
 		start, end = end, start
 	}
@@ -70,11 +72,12 @@ const barWidth = 1
 func (sw *SignalWindow) Draw(zeroPosition int32, renderer *sdl.Renderer, windowSize WindowSize) {
 	renderer.SetDrawColor(0, 255, 0, 255)
 	mx := sw.Max()
-	for i := sw.start; i < sw.start+int(windowSize.Width)/barWidth*sw.scaleFactor; i++ {
+	fmt.Printf("Start: %v\n", sw.start)
+	for i := sw.start / sw.scaleFactor; i < sw.start/sw.scaleFactor+int(windowSize.Width)/barWidth; i++ {
 		l, u := sw.Get(i)
 		lh := int32(float64(windowSize.Height) / 4.0 * float64(l) / float64(mx))
 		uh := int32(float64(windowSize.Height) / 4.0 * float64(u) / float64(mx))
-		x := int32(i - sw.start)
+		x := int32(i - sw.start/sw.scaleFactor)
 		rect := &sdl.Rect{x * barWidth, zeroPosition - uh, barWidth, uh - lh}
 		renderer.FillRect(rect)
 	}
@@ -218,7 +221,8 @@ outer:
 					renderer.SetDrawColor(242, 242, 242, 255)
 					renderer.Clear()
 
-					view.Shift(int(mousePos.X - clickOffset.X))
+					view.Shift(int(clickOffset.X - mousePos.X))
+					clickOffset.X = mousePos.X
 					view.Draw(windowSize.Height/4, renderer, windowSize)
 
 					spectraWindow.dx = int32(view.start)
@@ -268,6 +272,7 @@ outer:
 						leftMouseButtonDown = true
 						clickOffset.X = mousePos.X
 						clickOffset.Y = mousePos.Y
+						fmt.Printf("click x: %v\n", clickOffset.X)
 					}
 					if !rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
 						rightMouseButtonDown = true
