@@ -69,6 +69,9 @@ func (sw *SignalWindow) Max() (mx float64) {
 
 const barWidth = 1
 
+const lowerMeaningfulHarmonic = 7
+const upperMeaningfulHarmonic = 31
+
 func (sw *SignalWindow) Draw(zeroPosition int32, renderer *sdl.Renderer, windowSize WindowSize) {
 	renderer.SetDrawColor(0, 255, 0, 255)
 	mx := sw.Max()
@@ -115,13 +118,13 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 	*/
 
 	fmt.Printf("Column count: %v\n", columnCount)
-	cellHeight := this.area.h / int32(len(this.buf[0]))
+	cellHeight := this.area.h / int32(upperMeaningfulHarmonic-lowerMeaningfulHarmonic)
 	fmt.Printf("cell height: %v\n", cellHeight)
 
 	maxValue := this.buf[startI][0]
 	fmt.Printf("Len: %v\n", len(this.buf[startI]))
 	for i := startI; i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
-		for j := 0; j < len(this.buf[i]); j++ {
+		for j := lowerMeaningfulHarmonic; j < upperMeaningfulHarmonic; j++ {
 			if maxValue < this.buf[i][j] {
 				maxValue = this.buf[i][j]
 			}
@@ -130,9 +133,9 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 	fmt.Printf("Max value: %v\n", maxValue)
 
 	for i := int32(startI); i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
-		for j := int32(0); j < int32(len(this.buf[i])); j++ {
+		for j := int32(lowerMeaningfulHarmonic); j < int32(upperMeaningfulHarmonic); j++ {
 			normalizedValue := uint8(this.buf[i][j] / maxValue * 255)
-			rect := &sdl.Rect{this.area.x + shift + (i-startI)*this.columnWidth, this.area.y + j*cellHeight, this.columnWidth, cellHeight}
+			rect := &sdl.Rect{this.area.x + shift + (i-startI)*this.columnWidth, this.area.y + (j-lowerMeaningfulHarmonic)*cellHeight, this.columnWidth, cellHeight}
 			renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
 			renderer.FillRect(rect)
 		}
