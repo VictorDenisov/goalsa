@@ -213,7 +213,7 @@ outer:
 					renderer.SetDrawColor(242, 242, 242, 255)
 					renderer.Clear()
 
-					view.start = lastOffset - int(mousePos.X-clickOffset.X)/barWidth*view.scaleFactor
+					view.start = (lastOffset - int(mousePos.X-clickOffset.X)) / barWidth * view.scaleFactor
 					if view.start < 0 {
 						view.start = 0
 					}
@@ -257,7 +257,7 @@ outer:
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
 						leftMouseButtonDown = false
-						lastOffset = lastOffset - int(mousePos.X-clickOffset.X)/barWidth*view.scaleFactor
+						lastOffset = lastOffset - int(mousePos.X-clickOffset.X)
 					}
 					if rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
 						rightMouseButtonDown = false
