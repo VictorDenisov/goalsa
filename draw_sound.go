@@ -225,7 +225,7 @@ outer:
 					clickOffset.X = mousePos.X
 					view.Draw(windowSize.Height/4, renderer, windowSize)
 
-					spectraWindow.dx = int32(view.start)
+					spectraWindow.dx = int32(view.start / view.scaleFactor)
 					if spectraWindow.dx < 0 {
 						spectraWindow.dx = 0
 					}
