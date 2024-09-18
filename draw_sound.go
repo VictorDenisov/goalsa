@@ -25,7 +25,7 @@ type SignalWindow struct {
 }
 
 func (this *SignalWindow) Shift(d int) {
-	this.start = d / barWidth * this.scaleFactor
+	this.start = this.start - d/barWidth*this.scaleFactor
 	if this.start < 0 {
 		this.start = 0
 	}
@@ -70,12 +70,11 @@ const barWidth = 1
 func (sw *SignalWindow) Draw(zeroPosition int32, renderer *sdl.Renderer, windowSize WindowSize) {
 	renderer.SetDrawColor(0, 255, 0, 255)
 	mx := sw.Max()
-	lb := -int(windowSize.Width) / (4 * barWidth)
-	for i := lb; i < int(windowSize.Width)/(4*barWidth); i++ {
+	for i := sw.start; i < sw.start+int(windowSize.Width)/barWidth*sw.scaleFactor; i++ {
 		l, u := sw.Get(i)
 		lh := int32(float64(windowSize.Height) / 4.0 * float64(l) / float64(mx))
 		uh := int32(float64(windowSize.Height) / 4.0 * float64(u) / float64(mx))
-		x := int32(i - lb)
+		x := int32(i - sw.start)
 		rect := &sdl.Rect{x * barWidth, zeroPosition - uh, barWidth, uh - lh}
 		renderer.FillRect(rect)
 	}
@@ -172,7 +171,6 @@ func drawSound(audioFile string) {
 			panic(err)
 		}
 	*/
-	var lastOffset int
 
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
@@ -220,7 +218,7 @@ outer:
 					renderer.SetDrawColor(242, 242, 242, 255)
 					renderer.Clear()
 
-					view.Shift(lastOffset - int(mousePos.X-clickOffset.X))
+					view.Shift(int(mousePos.X - clickOffset.X))
 					view.Draw(windowSize.Height/4, renderer, windowSize)
 
 					spectraWindow.dx = int32(view.start)
@@ -261,7 +259,6 @@ outer:
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
 						leftMouseButtonDown = false
-						lastOffset = lastOffset - int(mousePos.X-clickOffset.X)
 					}
 					if rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
 						rightMouseButtonDown = false
