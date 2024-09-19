@@ -20,6 +20,7 @@ type AreaRect struct {
 
 type SignalWindow struct {
 	buf         []float64
+	area        AreaRect
 	start       int
 	scaleFactor int
 }
@@ -72,16 +73,16 @@ const barWidth = 1
 const lowerMeaningfulHarmonic = 7
 const upperMeaningfulHarmonic = 31
 
-func (sw *SignalWindow) Draw(zeroPosition int32, renderer *sdl.Renderer, windowSize WindowSize) {
+func (sw *SignalWindow) Draw(renderer *sdl.Renderer) {
 	renderer.SetDrawColor(0, 255, 0, 255)
 	mx := sw.Max()
 	fmt.Printf("Start: %v\n", sw.start)
-	for i := sw.start / sw.scaleFactor; i < sw.start/sw.scaleFactor+int(windowSize.Width)/barWidth; i++ {
+	for i := sw.start / sw.scaleFactor; i < sw.start/sw.scaleFactor+int(sw.area.w)/barWidth; i++ {
 		l, u := sw.Get(i)
-		lh := int32(float64(windowSize.Height) / 4.0 * float64(l) / float64(mx))
-		uh := int32(float64(windowSize.Height) / 4.0 * float64(u) / float64(mx))
+		lh := int32(float64(sw.area.h) / 2.0 * float64(l) / float64(mx))
+		uh := int32(float64(sw.area.h) / 2.0 * float64(u) / float64(mx))
 		x := int32(i - sw.start/sw.scaleFactor)
-		rect := &sdl.Rect{x * barWidth, zeroPosition - uh, barWidth, uh - lh}
+		rect := &sdl.Rect{sw.area.x + x*barWidth, sw.area.y + sw.area.h/2 - uh, barWidth, uh - lh}
 		renderer.FillRect(rect)
 	}
 }
@@ -164,7 +165,7 @@ func drawSound(audioFile string) {
 		nil,
 		nil,
 	)
-	view := &SignalWindow{res, 0, 1}
+	view := &SignalWindow{res, AreaRect{0, 0, 0, 0}, 0, 1}
 	spectraWindow := &HeatMap{spectra, AreaRect{0, 0, 0, 0}, fragmentSize, 0}
 	selectedBlocksLen := len(res) / fragmentSize
 	if len(res)%fragmentSize > 0 {
@@ -206,6 +207,8 @@ outer:
 				if e.Event == sdl.WINDOWEVENT_RESIZED {
 					windowSize.Width = e.Data1
 					windowSize.Height = e.Data2
+					view.area.w = windowSize.Width
+					view.area.h = windowSize.Height / 2
 					spectraWindow.area.y = windowSize.Height / 2
 					spectraWindow.area.w = windowSize.Width
 					spectraWindow.area.h = windowSize.Height / 2
@@ -214,7 +217,7 @@ outer:
 				renderer.SetDrawColor(242, 242, 242, 255)
 				renderer.Clear()
 
-				view.Draw(windowSize.Height/4, renderer, windowSize)
+				view.Draw(renderer)
 				spectraWindow.Draw(renderer)
 				renderer.Present()
 			case *sdl.MouseMotionEvent:
@@ -226,7 +229,7 @@ outer:
 
 					view.Shift(int(clickOffset.X - mousePos.X))
 					clickOffset.X = mousePos.X
-					view.Draw(windowSize.Height/4, renderer, windowSize)
+					view.Draw(renderer)
 
 					spectraWindow.dx = int32(view.start / view.scaleFactor)
 					if spectraWindow.dx < 0 {
@@ -252,7 +255,7 @@ outer:
 					if view.scaleFactor < 1 {
 						view.scaleFactor = 1
 					}
-					view.Draw(windowSize.Height/4, renderer, windowSize)
+					view.Draw(renderer)
 
 					spectraWindow.columnWidth = int32(fragmentSize) / int32(view.scaleFactor)
 
