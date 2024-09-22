@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 	"os"
 
@@ -12,17 +13,32 @@ type WindowSize struct {
 	Width, Height int32
 }
 
+type AreaRect struct {
+	// upper left corner coordinates and width and height
+	x, y, w, h int32
+}
+
 type SignalWindow struct {
 	buf         []float64
+	area        AreaRect
 	start       int
 	scaleFactor int
+}
+
+func (this *SignalWindow) Shift(d int) {
+	fmt.Printf("Shift by: %v\n", d)
+	fmt.Printf("Scale factor: %v\n", this.scaleFactor)
+	this.start = this.start + d/barWidth*this.scaleFactor
+	if this.start < 0 {
+		this.start = 0
+	}
 }
 
 func (sw *SignalWindow) Get(v int) (l, u float64) {
 	l = 0
 	u = 0
-	start := sw.start + v*sw.scaleFactor
-	end := sw.start + (v+1)*sw.scaleFactor
+	start := v * sw.scaleFactor
+	end := (v + 1) * sw.scaleFactor
 	if end < start {
 		start, end = end, start
 	}
@@ -54,17 +70,84 @@ func (sw *SignalWindow) Max() (mx float64) {
 
 const barWidth = 1
 
-func (sw *SignalWindow) Draw(zeroPosition int32, renderer *sdl.Renderer, windowSize WindowSize) {
+const lowerMeaningfulHarmonic = 7
+const upperMeaningfulHarmonic = 31
+
+func (sw *SignalWindow) Draw(renderer *sdl.Renderer) {
 	renderer.SetDrawColor(0, 255, 0, 255)
 	mx := sw.Max()
-	lb := -int(windowSize.Width) / (4 * barWidth)
-	for i := lb; i < int(windowSize.Width)/(4*barWidth); i++ {
+	fmt.Printf("Start: %v\n", sw.start)
+	for i := sw.start / sw.scaleFactor; i < sw.start/sw.scaleFactor+int(sw.area.w)/barWidth; i++ {
 		l, u := sw.Get(i)
-		lh := int32(float64(windowSize.Height) / 4.0 * float64(l) / float64(mx))
-		uh := int32(float64(windowSize.Height) / 4.0 * float64(u) / float64(mx))
-		x := int32(i - lb)
-		rect := &sdl.Rect{x * barWidth * 2, zeroPosition - uh, barWidth, uh - lh}
+		lh := int32(float64(sw.area.h) / 2.0 * float64(l) / float64(mx))
+		uh := int32(float64(sw.area.h) / 2.0 * float64(u) / float64(mx))
+		x := int32(i - sw.start/sw.scaleFactor)
+		rect := &sdl.Rect{sw.area.x + x*barWidth, sw.area.y + sw.area.h/2 - uh, barWidth, uh - lh}
 		renderer.FillRect(rect)
+	}
+}
+
+type HeatMap struct {
+	buf         [][]float64
+	area        AreaRect
+	columnWidth int32
+	dx          int32
+}
+
+func (this *HeatMap) Draw(renderer *sdl.Renderer) {
+	startI := this.dx / this.columnWidth
+	if this.dx%this.columnWidth > 0 {
+		startI++
+	}
+	if startI >= int32(len(this.buf)) {
+		return
+	}
+	fmt.Printf("StartI: %v\n", startI)
+	shift := int32(0)
+	if this.dx%this.columnWidth > 0 {
+		shift = this.columnWidth - this.dx%this.columnWidth
+	}
+	fmt.Printf("ColumnWidth: %v\n", this.columnWidth)
+	fmt.Printf("area width: %v\n", this.area.w)
+	fmt.Printf("area height: %v\n", this.area.h)
+	//firstFullStartWidth := (this.area.w - shift - (this.area.w-shift)%this.columnWidth)
+	columnCount := (this.area.w - shift) / this.columnWidth
+	/*
+		if firstFullStartWidth%this.columnWidth > 0 {
+			columnCount++
+		}
+	*/
+
+	fmt.Printf("Column count: %v\n", columnCount)
+	cellHeight := this.area.h / int32(upperMeaningfulHarmonic-lowerMeaningfulHarmonic)
+	fmt.Printf("cell height: %v\n", cellHeight)
+
+	maxValue := this.buf[startI][0]
+	fmt.Printf("Len: %v\n", len(this.buf[startI]))
+	for i := startI; i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
+		for j := lowerMeaningfulHarmonic; j < upperMeaningfulHarmonic; j++ {
+			if maxValue < this.buf[i][j] {
+				maxValue = this.buf[i][j]
+			}
+		}
+	}
+	fmt.Printf("Max value: %v\n", maxValue)
+
+	for i := int32(startI); i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
+		for j := int32(lowerMeaningfulHarmonic); j < int32(upperMeaningfulHarmonic); j++ {
+			normalizedValue := uint8(this.buf[i][j] / maxValue * 255)
+			rect := &sdl.Rect{this.area.x + shift + (i-startI)*this.columnWidth, this.area.y + (j-lowerMeaningfulHarmonic)*cellHeight, this.columnWidth, cellHeight}
+			renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
+			renderer.FillRect(rect)
+		}
+	}
+}
+
+func minInt32(a, b int32) int32 {
+	if a < b {
+		return a
+	} else {
+		return b
 	}
 }
 
@@ -77,13 +160,13 @@ func drawSound(audioFile string) {
 	var clickOffset sdl.Point
 	var rightClickOffset sdl.Point
 
-	_, res, _, spectra, _ := processFile(
+	_, res, _, _, spectra, _ := processFile(
 		audioFile,
 		nil,
 		nil,
 	)
-	view := &SignalWindow{res, 0, 1}
-	spectraWindow := &SignalWindow{spectra, 0, 1}
+	view := &SignalWindow{res, AreaRect{0, 0, 0, 0}, 0, 1}
+	spectraWindow := &HeatMap{spectra, AreaRect{0, 0, 0, 0}, fragmentSize, 0}
 	selectedBlocksLen := len(res) / fragmentSize
 	if len(res)%fragmentSize > 0 {
 		selectedBlocksLen++
@@ -95,7 +178,6 @@ func drawSound(audioFile string) {
 			panic(err)
 		}
 	*/
-	var lastOffset int
 
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
@@ -125,13 +207,18 @@ outer:
 				if e.Event == sdl.WINDOWEVENT_RESIZED {
 					windowSize.Width = e.Data1
 					windowSize.Height = e.Data2
+					view.area.w = windowSize.Width
+					view.area.h = windowSize.Height / 2
+					spectraWindow.area.y = windowSize.Height / 2
+					spectraWindow.area.w = windowSize.Width
+					spectraWindow.area.h = windowSize.Height / 2
 
 				}
 				renderer.SetDrawColor(242, 242, 242, 255)
 				renderer.Clear()
 
-				view.Draw(windowSize.Height/4, renderer, windowSize)
-				spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
+				view.Draw(renderer)
+				spectraWindow.Draw(renderer)
 				renderer.Present()
 			case *sdl.MouseMotionEvent:
 				mousePos = sdl.Point{e.X, e.Y}
@@ -140,17 +227,15 @@ outer:
 					renderer.SetDrawColor(242, 242, 242, 255)
 					renderer.Clear()
 
-					view.start = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*view.scaleFactor
-					if view.start < 0 {
-						view.start = 0
-					}
-					view.Draw(windowSize.Height/4, renderer, windowSize)
+					view.Shift(int(clickOffset.X - mousePos.X))
+					clickOffset.X = mousePos.X
+					view.Draw(renderer)
 
-					spectraWindow.start = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*spectraWindow.scaleFactor
-					if spectraWindow.start < 0 {
-						spectraWindow.start = 0
+					spectraWindow.dx = int32(view.start / view.scaleFactor)
+					if spectraWindow.dx < 0 {
+						spectraWindow.dx = 0
 					}
-					spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
+					spectraWindow.Draw(renderer)
 					renderer.Present()
 				}
 
@@ -170,17 +255,13 @@ outer:
 					if view.scaleFactor < 1 {
 						view.scaleFactor = 1
 					}
-					view.Draw(windowSize.Height/4, renderer, windowSize)
+					view.Draw(renderer)
 
-					if int(e.Y) < 0 {
-						spectraWindow.scaleFactor <<= int(-e.Y)
-					} else {
-						spectraWindow.scaleFactor >>= int(e.Y)
-					}
-					if spectraWindow.scaleFactor < 1 {
-						spectraWindow.scaleFactor = 1
-					}
-					spectraWindow.Draw(windowSize.Height/4*3, renderer, windowSize)
+					spectraWindow.columnWidth = int32(fragmentSize) / int32(view.scaleFactor)
+
+					fmt.Printf("Scale factor: %v\n", int32(view.scaleFactor))
+
+					spectraWindow.Draw(renderer)
 					renderer.Present()
 				}
 
@@ -188,7 +269,6 @@ outer:
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
 						leftMouseButtonDown = false
-						lastOffset = lastOffset - int(mousePos.X-clickOffset.X)/barWidth/2*view.scaleFactor
 					}
 					if rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
 						rightMouseButtonDown = false
@@ -198,6 +278,7 @@ outer:
 						leftMouseButtonDown = true
 						clickOffset.X = mousePos.X
 						clickOffset.Y = mousePos.Y
+						fmt.Printf("click x: %v\n", clickOffset.X)
 					}
 					if !rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
 						rightMouseButtonDown = true
