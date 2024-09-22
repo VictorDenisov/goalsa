@@ -23,6 +23,7 @@ type SignalWindow struct {
 	area        AreaRect
 	start       int
 	scaleFactor int
+	norm        float64
 }
 
 func (this *SignalWindow) Shift(d int) {
@@ -73,14 +74,20 @@ const barWidth = 1
 const lowerMeaningfulHarmonic = 7
 const upperMeaningfulHarmonic = 31
 
+func (this *SignalWindow) Normalize(v float64) int32 {
+	return int32(float64(this.area.h) / 2.0 * float64(v) / float64(this.norm))
+}
+
 func (sw *SignalWindow) Draw(renderer *sdl.Renderer) {
 	renderer.SetDrawColor(0, 255, 0, 255)
-	mx := sw.Max()
+	if math.Abs(sw.norm) < 0.00001 {
+		sw.norm = sw.Max()
+	}
 	fmt.Printf("Start: %v\n", sw.start)
 	for i := sw.start / sw.scaleFactor; i < sw.start/sw.scaleFactor+int(sw.area.w)/barWidth; i++ {
 		l, u := sw.Get(i)
-		lh := int32(float64(sw.area.h) / 2.0 * float64(l) / float64(mx))
-		uh := int32(float64(sw.area.h) / 2.0 * float64(u) / float64(mx))
+		lh := sw.Normalize(l)
+		uh := sw.Normalize(u)
 		x := int32(i - sw.start/sw.scaleFactor)
 		rect := &sdl.Rect{sw.area.x + x*barWidth, sw.area.y + sw.area.h/2 - uh, barWidth, uh - lh}
 		renderer.FillRect(rect)
@@ -165,7 +172,7 @@ func drawSound(audioFile string) {
 		nil,
 		nil,
 	)
-	view := &SignalWindow{res, AreaRect{0, 0, 0, 0}, 0, 1}
+	view := &SignalWindow{res, AreaRect{0, 0, 0, 0}, 0, 1, 0}
 	spectraWindow := &HeatMap{spectra, AreaRect{0, 0, 0, 0}, fragmentSize, 0}
 	selectedBlocksLen := len(res) / fragmentSize
 	if len(res)%fragmentSize > 0 {
@@ -222,21 +229,24 @@ outer:
 				renderer.Present()
 			case *sdl.MouseMotionEvent:
 				mousePos = sdl.Point{e.X, e.Y}
+				keyboardState := sdl.GetModState()
 				if leftMouseButtonDown {
+					if keyboardState&sdl.KMOD_LCTRL > 0 {
+					} else {
+						renderer.SetDrawColor(242, 242, 242, 255)
+						renderer.Clear()
 
-					renderer.SetDrawColor(242, 242, 242, 255)
-					renderer.Clear()
+						view.Shift(int(clickOffset.X - mousePos.X))
+						clickOffset.X = mousePos.X
+						view.Draw(renderer)
 
-					view.Shift(int(clickOffset.X - mousePos.X))
-					clickOffset.X = mousePos.X
-					view.Draw(renderer)
-
-					spectraWindow.dx = int32(view.start / view.scaleFactor)
-					if spectraWindow.dx < 0 {
-						spectraWindow.dx = 0
+						spectraWindow.dx = int32(view.start / view.scaleFactor)
+						if spectraWindow.dx < 0 {
+							spectraWindow.dx = 0
+						}
+						spectraWindow.Draw(renderer)
+						renderer.Present()
 					}
-					spectraWindow.Draw(renderer)
-					renderer.Present()
 				}
 
 			case *sdl.MouseWheelEvent:
