@@ -31,6 +31,10 @@ type SignalWindow struct {
 	norm        float64
 }
 
+func (this *SignalWindow) Renorm(v int32) {
+	this.norm = float64(v) / float64(this.area.h) * this.norm
+}
+
 func (this *SignalWindow) Shift(d int) {
 	log.Tracef("Shift by: %v\n", d)
 	log.Tracef("Scale factor: %v\n", this.scaleFactor)
@@ -230,21 +234,17 @@ outer:
 				renderer.Present()
 			case *sdl.MouseMotionEvent:
 				mousePos = sdl.Point{e.X, e.Y}
-				keyboardState := sdl.GetModState()
 				if leftMouseButtonDown {
-					if keyboardState&sdl.KMOD_LCTRL > 0 {
-					} else {
-						renderer.SetDrawColor(242, 242, 242, 255)
-						renderer.Clear()
+					renderer.SetDrawColor(242, 242, 242, 255)
+					renderer.Clear()
 
-						view.Shift(int(clickOffset.X - mousePos.X))
-						clickOffset.X = mousePos.X
-						view.Draw(renderer)
+					view.Shift(int(clickOffset.X - mousePos.X))
+					clickOffset.X = mousePos.X
+					view.Draw(renderer)
 
-						spectraWindow.SetDx(int32(view.start / view.scaleFactor))
-						spectraWindow.Draw(renderer)
-						renderer.Present()
-					}
+					spectraWindow.SetDx(int32(view.start / view.scaleFactor))
+					spectraWindow.Draw(renderer)
+					renderer.Present()
 				}
 
 			case *sdl.MouseWheelEvent:
@@ -274,6 +274,7 @@ outer:
 				}
 
 			case *sdl.MouseButtonEvent:
+				keyboardState := sdl.GetModState()
 				if e.Type == sdl.MOUSEBUTTONUP {
 					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
 						leftMouseButtonDown = false
@@ -294,6 +295,24 @@ outer:
 						rightClickOffset.Y = mousePos.Y
 						selectedBlock := (int(rightClickOffset.X)*view.scaleFactor + view.start) / fragmentSize
 						selectedBlocks[selectedBlock] = true
+					}
+					if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_LEFT {
+						if e.Y < view.area.y+view.area.h/2 {
+							renderer.SetDrawColor(242, 242, 242, 255)
+							renderer.Clear()
+							view.Renorm(view.area.y + view.area.h/2 - clickOffset.Y)
+							view.Draw(renderer)
+							spectraWindow.Draw(renderer)
+							renderer.Present()
+						}
+					}
+					if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_RIGHT {
+						renderer.SetDrawColor(242, 242, 242, 255)
+						renderer.Clear()
+						view.norm = view.Max()
+						view.Draw(renderer)
+						spectraWindow.Draw(renderer)
+						renderer.Present()
 					}
 				}
 			}
