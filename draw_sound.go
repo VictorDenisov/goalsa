@@ -117,13 +117,7 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 	fmt.Printf("ColumnWidth: %v\n", this.columnWidth)
 	fmt.Printf("area width: %v\n", this.area.w)
 	fmt.Printf("area height: %v\n", this.area.h)
-	//firstFullStartWidth := (this.area.w - shift - (this.area.w-shift)%this.columnWidth)
 	columnCount := (this.area.w - shift) / this.columnWidth
-	/*
-		if firstFullStartWidth%this.columnWidth > 0 {
-			columnCount++
-		}
-	*/
 
 	fmt.Printf("Column count: %v\n", columnCount)
 	cellHeight := this.area.h / int32(upperMeaningfulHarmonic-lowerMeaningfulHarmonic)
