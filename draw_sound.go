@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math"
 	"os"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -32,8 +32,8 @@ type SignalWindow struct {
 }
 
 func (this *SignalWindow) Shift(d int) {
-	fmt.Printf("Shift by: %v\n", d)
-	fmt.Printf("Scale factor: %v\n", this.scaleFactor)
+	log.Tracef("Shift by: %v\n", d)
+	log.Tracef("Scale factor: %v\n", this.scaleFactor)
 	this.start = this.start + d/barWidth*this.scaleFactor
 	if this.start < 0 {
 		this.start = 0
@@ -83,7 +83,7 @@ func (sw *SignalWindow) Draw(renderer *sdl.Renderer) {
 	if math.Abs(sw.norm) < 0.00001 {
 		sw.norm = sw.Max()
 	}
-	fmt.Printf("Start: %v\n", sw.start)
+	log.Tracef("Start: %v\n", sw.start)
 	for i := sw.start / sw.scaleFactor; i < sw.start/sw.scaleFactor+int(sw.area.w)/barWidth; i++ {
 		l, u := sw.Get(i)
 		lh := sw.Normalize(l)
@@ -116,22 +116,22 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 	if startI >= int32(len(this.buf)) {
 		return
 	}
-	fmt.Printf("StartI: %v\n", startI)
+	log.Tracef("StartI: %v\n", startI)
 	shift := int32(0)
 	if this.dx%this.columnWidth > 0 {
 		shift = this.columnWidth - this.dx%this.columnWidth
 	}
-	fmt.Printf("ColumnWidth: %v\n", this.columnWidth)
-	fmt.Printf("area width: %v\n", this.area.w)
-	fmt.Printf("area height: %v\n", this.area.h)
+	log.Tracef("ColumnWidth: %v\n", this.columnWidth)
+	log.Tracef("area width: %v\n", this.area.w)
+	log.Tracef("area height: %v\n", this.area.h)
 	columnCount := (this.area.w - shift) / this.columnWidth
 
-	fmt.Printf("Column count: %v\n", columnCount)
+	log.Tracef("Column count: %v\n", columnCount)
 	cellHeight := this.area.h / int32(upperMeaningfulHarmonic-lowerMeaningfulHarmonic)
-	fmt.Printf("cell height: %v\n", cellHeight)
+	log.Tracef("cell height: %v\n", cellHeight)
 
 	maxValue := this.buf[startI][0]
-	fmt.Printf("Len: %v\n", len(this.buf[startI]))
+	log.Tracef("Len: %v\n", len(this.buf[startI]))
 	for i := startI; i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
 		for j := lowerMeaningfulHarmonic; j < upperMeaningfulHarmonic; j++ {
 			if maxValue < this.buf[i][j] {
@@ -139,7 +139,7 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 			}
 		}
 	}
-	fmt.Printf("Max value: %v\n", maxValue)
+	log.Tracef("Max value: %v\n", maxValue)
 
 	for i := int32(startI); i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
 		for j := int32(lowerMeaningfulHarmonic); j < int32(upperMeaningfulHarmonic); j++ {
@@ -267,7 +267,7 @@ outer:
 
 					spectraWindow.columnWidth = int32(fragmentSize) / int32(view.scaleFactor)
 
-					fmt.Printf("Scale factor: %v\n", int32(view.scaleFactor))
+					log.Tracef("Scale factor: %v\n", int32(view.scaleFactor))
 
 					spectraWindow.Draw(renderer)
 					renderer.Present()
@@ -286,7 +286,7 @@ outer:
 						leftMouseButtonDown = true
 						clickOffset.X = mousePos.X
 						clickOffset.Y = mousePos.Y
-						fmt.Printf("click x: %v\n", clickOffset.X)
+						log.Tracef("click x: %v\n", clickOffset.X)
 					}
 					if !rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
 						rightMouseButtonDown = true
