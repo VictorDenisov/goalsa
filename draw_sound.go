@@ -101,6 +101,13 @@ type HeatMap struct {
 	dx          int32
 }
 
+func (this *HeatMap) SetDx(dx int32) {
+	this.dx = dx
+	if this.dx < 0 {
+		this.dx = 0
+	}
+}
+
 func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 	startI := this.dx / this.columnWidth
 	if this.dx%this.columnWidth > 0 {
@@ -234,10 +241,7 @@ outer:
 						clickOffset.X = mousePos.X
 						view.Draw(renderer)
 
-						spectraWindow.dx = int32(view.start / view.scaleFactor)
-						if spectraWindow.dx < 0 {
-							spectraWindow.dx = 0
-						}
+						spectraWindow.SetDx(int32(view.start / view.scaleFactor))
 						spectraWindow.Draw(renderer)
 						renderer.Present()
 					}
