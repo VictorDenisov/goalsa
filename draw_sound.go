@@ -18,6 +18,11 @@ type AreaRect struct {
 	x, y, w, h int32
 }
 
+const barWidth = 1
+
+const lowerMeaningfulHarmonic = 7
+const upperMeaningfulHarmonic = 31
+
 type SignalWindow struct {
 	buf         []float64
 	area        AreaRect
@@ -68,11 +73,6 @@ func (sw *SignalWindow) Max() (mx float64) {
 	}
 	return
 }
-
-const barWidth = 1
-
-const lowerMeaningfulHarmonic = 7
-const upperMeaningfulHarmonic = 31
 
 func (this *SignalWindow) Normalize(v float64) int32 {
 	return int32(float64(this.area.h) / 2.0 * float64(v) / float64(this.norm))
