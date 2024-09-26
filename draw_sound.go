@@ -31,6 +31,17 @@ type SignalWindow struct {
 	norm        float64
 }
 
+func (this *SignalWindow) Scale(s int32) {
+	if int(s) < 0 {
+		this.scaleFactor <<= int(-s)
+	} else {
+		this.scaleFactor >>= int(s)
+	}
+	if this.scaleFactor < 1 {
+		this.scaleFactor = 1
+	}
+}
+
 func (this *SignalWindow) Renorm(v int32) {
 	this.norm = float64(v) / float64(this.area.h) * this.norm
 }
@@ -255,14 +266,7 @@ outer:
 					renderer.SetDrawColor(242, 242, 242, 255)
 					renderer.Clear()
 
-					if int(e.Y) < 0 {
-						view.scaleFactor <<= int(-e.Y)
-					} else {
-						view.scaleFactor >>= int(e.Y)
-					}
-					if view.scaleFactor < 1 {
-						view.scaleFactor = 1
-					}
+					view.Scale(e.Y)
 					view.Draw(renderer)
 
 					spectraWindow.columnWidth = int32(fragmentSize) / int32(view.scaleFactor)
