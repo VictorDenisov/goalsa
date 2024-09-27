@@ -31,7 +31,9 @@ type SignalWindow struct {
 	norm        float64
 }
 
-func (this *SignalWindow) Scale(s int32) {
+func (this *SignalWindow) Scale(s int32, mousePos sdl.Point) {
+	cursorRelativeToArea := (mousePos.X - this.area.x) / barWidth
+	fixedPoint := this.start + int(cursorRelativeToArea)*this.scaleFactor
 	if int(s) < 0 {
 		this.scaleFactor <<= int(-s)
 	} else {
@@ -40,6 +42,7 @@ func (this *SignalWindow) Scale(s int32) {
 	if this.scaleFactor < 1 {
 		this.scaleFactor = 1
 	}
+	this.start = (fixedPoint/this.scaleFactor - int(cursorRelativeToArea)) * this.scaleFactor
 }
 
 func (this *SignalWindow) Renorm(v int32) {
@@ -260,19 +263,22 @@ outer:
 
 			case *sdl.MouseWheelEvent:
 				keyboardState := sdl.GetModState()
+				mx, my, _ := sdl.GetMouseState()
+				mousePos = sdl.Point{mx, my}
 				if keyboardState&sdl.KMOD_LSHIFT > 0 {
 					println("Shift is pressed")
 				} else {
 					renderer.SetDrawColor(242, 242, 242, 255)
 					renderer.Clear()
 
-					view.Scale(e.Y)
+					view.Scale(e.Y, mousePos)
 					view.Draw(renderer)
 
 					spectraWindow.columnWidth = int32(fragmentSize) / int32(view.scaleFactor)
 
 					log.Tracef("Scale factor: %v\n", int32(view.scaleFactor))
 
+					spectraWindow.SetDx(int32(view.start / view.scaleFactor))
 					spectraWindow.Draw(renderer)
 					renderer.Present()
 				}
