@@ -53,9 +53,6 @@ func (this *SignalWindow) Shift(d int) {
 	log.Tracef("Shift by: %v\n", d)
 	log.Tracef("Scale factor: %v\n", this.scaleFactor)
 	this.start = this.start + d/barWidth*this.scaleFactor
-	if this.start < 0 {
-		this.start = 0
-	}
 }
 
 func (sw *SignalWindow) Get(v int) (l, u float64) {
@@ -121,23 +118,27 @@ type HeatMap struct {
 
 func (this *HeatMap) SetDx(dx int32) {
 	this.dx = dx
-	if this.dx < 0 {
-		this.dx = 0
-	}
 }
 
 func (this *HeatMap) Draw(renderer *sdl.Renderer) {
-	startI := this.dx / this.columnWidth
-	if this.dx%this.columnWidth > 0 {
-		startI++
-	}
-	if startI >= int32(len(this.buf)) {
-		return
-	}
-	log.Tracef("StartI: %v\n", startI)
+	startI := int32(0)
 	shift := int32(0)
-	if this.dx%this.columnWidth > 0 {
-		shift = this.columnWidth - this.dx%this.columnWidth
+
+	if this.dx > 0 {
+		startI = this.dx / this.columnWidth
+		if this.dx%this.columnWidth > 0 {
+			startI++
+		}
+		if startI >= int32(len(this.buf)) {
+			return
+		}
+		log.Tracef("StartI: %v\n", startI)
+		if this.dx%this.columnWidth > 0 {
+			shift = this.columnWidth - this.dx%this.columnWidth
+		}
+	} else {
+		startI = 0
+		shift = -this.dx
 	}
 	log.Tracef("ColumnWidth: %v\n", this.columnWidth)
 	log.Tracef("area width: %v\n", this.area.w)
