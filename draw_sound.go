@@ -121,8 +121,8 @@ func (this *HeatMap) SetDx(dx int32) {
 }
 
 func (this *HeatMap) Draw(renderer *sdl.Renderer) {
-	startI := int32(0)
-	shift := int32(0)
+	startI := int32(0) // First window that is going to be rendered.
+	shift := int32(0)  // Offset of the fisrt rendered window relative to area's left boundary.
 
 	if this.dx > 0 {
 		startI = this.dx / this.columnWidth
@@ -151,7 +151,11 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 
 	maxValue := this.buf[startI][0]
 	log.Tracef("Len: %v\n", len(this.buf[startI]))
-	for i := startI; i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
+	firstMax := startI
+	if shift > 0 && firstMax > 0 {
+		firstMax--
+	}
+	for i := firstMax; i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
 		for j := lowerMeaningfulHarmonic; j < upperMeaningfulHarmonic; j++ {
 			if maxValue < this.buf[i][j] {
 				maxValue = this.buf[i][j]
@@ -160,6 +164,16 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 	}
 	log.Tracef("Max value: %v\n", maxValue)
 
+	// Draw first incomplete window.
+	if startI > 0 {
+		for j := int32(lowerMeaningfulHarmonic); j < int32(upperMeaningfulHarmonic); j++ {
+			normalizedValue := uint8(this.buf[startI-1][j] / maxValue * 255)
+			rect := &sdl.Rect{this.area.x, this.area.y + (j-lowerMeaningfulHarmonic)*cellHeight, shift, cellHeight}
+
+			renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
+			renderer.FillRect(rect)
+		}
+	}
 	for i := int32(startI); i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
 		for j := int32(lowerMeaningfulHarmonic); j < int32(upperMeaningfulHarmonic); j++ {
 			normalizedValue := uint8(this.buf[i][j] / maxValue * 255)
