@@ -199,12 +199,6 @@ func drawSound(audioFile string) {
 		selectedBlocksLen++
 	}
 	selectedBlocks := make([]bool, selectedBlocksLen)
-	/*
-		buf, err := readFileData(audioFile)
-		if err != nil {
-			panic(err)
-		}
-	*/
 
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
