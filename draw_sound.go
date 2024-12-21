@@ -24,11 +24,25 @@ const lowerMeaningfulHarmonic = 7
 const upperMeaningfulHarmonic = 31
 
 type SignalWindow struct {
-	buf         []float64
-	area        AreaRect
-	start       int
-	scaleFactor int
-	norm        float64
+	buf            []float64
+	area           AreaRect
+	start          int
+	scaleFactor    int
+	norm           float64
+	selectedBlocks []bool
+}
+
+func NewSignalWindow(res []float64) *SignalWindow {
+	selectedBlocksLen := len(res) / fragmentSize
+	if len(res)%fragmentSize > 0 {
+		selectedBlocksLen++
+	}
+	return &SignalWindow{res, AreaRect{0, 0, 0, 0}, 0, 1, 0, make([]bool, selectedBlocksLen)}
+}
+
+func (this *SignalWindow) SelectBlock(p sdl.Point) {
+	selectedBlock := (int(p.X)*this.scaleFactor + this.start) / fragmentSize
+	this.selectedBlocks[selectedBlock] = true
 }
 
 func (this *SignalWindow) Scale(s int32, mousePos sdl.Point) {
@@ -206,13 +220,8 @@ func drawSound(audioFile string) {
 		nil,
 		nil,
 	)
-	view := &SignalWindow{res, AreaRect{0, 0, 0, 0}, 0, 1, 0}
+	view := NewSignalWindow(res)
 	spectraWindow := &HeatMap{spectra, AreaRect{0, 0, 0, 0}, fragmentSize, 0}
-	selectedBlocksLen := len(res) / fragmentSize
-	if len(res)%fragmentSize > 0 {
-		selectedBlocksLen++
-	}
-	selectedBlocks := make([]bool, selectedBlocksLen)
 
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
@@ -312,8 +321,7 @@ outer:
 						rightMouseButtonDown = true
 						rightClickOffset.X = mousePos.X
 						rightClickOffset.Y = mousePos.Y
-						selectedBlock := (int(rightClickOffset.X)*view.scaleFactor + view.start) / fragmentSize
-						selectedBlocks[selectedBlock] = true
+						view.SelectBlock(rightClickOffset)
 					}
 					if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_LEFT {
 						if e.Y < view.area.y+view.area.h/2 {
