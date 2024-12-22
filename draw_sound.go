@@ -24,11 +24,10 @@ const lowerMeaningfulHarmonic = 7
 const upperMeaningfulHarmonic = 31
 
 type SignalWindow struct {
-	buf            []float64
-	area           AreaRect
-	view           *View
-	norm           float64
-	selectedBlocks []bool
+	buf  []float64
+	area AreaRect
+	view *View
+	norm float64
 }
 
 func NewSignalWindow(res []float64, view *View) *SignalWindow {
@@ -36,12 +35,7 @@ func NewSignalWindow(res []float64, view *View) *SignalWindow {
 	if len(res)%fragmentSize > 0 {
 		selectedBlocksLen++
 	}
-	return &SignalWindow{res, AreaRect{0, 0, 0, 0}, view, 0, make([]bool, selectedBlocksLen)}
-}
-
-func (this *SignalWindow) SelectBlock(p sdl.Point) {
-	selectedBlock := (int(p.X)*this.view.scaleFactor + this.view.start) / fragmentSize
-	this.selectedBlocks[selectedBlock] = true
+	return &SignalWindow{res, AreaRect{0, 0, 0, 0}, view, 0}
 }
 
 func (this *SignalWindow) Renorm(v int32) {
