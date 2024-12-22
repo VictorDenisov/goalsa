@@ -103,40 +103,37 @@ func (sw *SignalWindow) Draw(renderer *sdl.Renderer) {
 }
 
 type HeatMap struct {
-	buf         [][]float64
-	area        AreaRect
-	columnWidth int32
-	dx          int32
-}
-
-func (this *HeatMap) SetDx(dx int32) {
-	this.dx = dx
+	buf  [][]float64
+	area AreaRect
+	view *View
 }
 
 func (this *HeatMap) Draw(renderer *sdl.Renderer) {
+	dx := int32(this.view.start / this.view.scaleFactor)
+	columnWidth := int32(fragmentSize) / int32(this.view.scaleFactor)
 	startI := int32(0) // First window that is going to be rendered.
 	shift := int32(0)  // Offset of the fisrt rendered window relative to area's left boundary.
 
-	if this.dx > 0 {
-		startI = this.dx / this.columnWidth
-		if this.dx%this.columnWidth > 0 {
+	if dx > 0 {
+		startI = dx / columnWidth
+		if dx%columnWidth > 0 {
 			startI++
 		}
 		if startI >= int32(len(this.buf)) {
 			return
 		}
 		log.Tracef("StartI: %v\n", startI)
-		if this.dx%this.columnWidth > 0 {
-			shift = this.columnWidth - this.dx%this.columnWidth
+		if dx%columnWidth > 0 {
+			shift = columnWidth - dx%columnWidth
 		}
 	} else {
 		startI = 0
-		shift = -this.dx
+		shift = -dx
 	}
-	log.Tracef("ColumnWidth: %v\n", this.columnWidth)
+	log.Tracef("ColumnWidth: %v\n", columnWidth)
 	log.Tracef("area width: %v\n", this.area.w)
 	log.Tracef("area height: %v\n", this.area.h)
-	columnCount := (this.area.w - shift) / this.columnWidth
+	columnCount := (this.area.w - shift) / columnWidth
 
 	log.Tracef("Column count: %v\n", columnCount)
 	cellHeight := this.area.h / int32(upperMeaningfulHarmonic-lowerMeaningfulHarmonic)
@@ -170,7 +167,7 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 	for i := int32(startI); i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
 		for j := int32(lowerMeaningfulHarmonic); j < int32(upperMeaningfulHarmonic); j++ {
 			normalizedValue := uint8(this.buf[i][j] / maxValue * 255)
-			rect := &sdl.Rect{this.area.x + shift + (i-startI)*this.columnWidth, this.area.y + (j-lowerMeaningfulHarmonic)*cellHeight, this.columnWidth, cellHeight}
+			rect := &sdl.Rect{this.area.x + shift + (i-startI)*columnWidth, this.area.y + (j-lowerMeaningfulHarmonic)*cellHeight, columnWidth, cellHeight}
 			renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
 			renderer.FillRect(rect)
 		}
@@ -201,7 +198,7 @@ func drawSound(audioFile string) {
 	)
 	view := NewView()
 	signalWindow := NewSignalWindow(res, view)
-	spectraWindow := &HeatMap{spectra, AreaRect{0, 0, 0, 0}, fragmentSize, 0}
+	spectraWindow := &HeatMap{spectra, AreaRect{0, 0, 0, 0}, view}
 
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
@@ -254,7 +251,6 @@ outer:
 					clickOffset.X = mousePos.X
 					signalWindow.Draw(renderer)
 
-					spectraWindow.SetDx(int32(signalWindow.view.start / signalWindow.view.scaleFactor))
 					spectraWindow.Draw(renderer)
 					renderer.Present()
 				}
@@ -273,11 +269,8 @@ outer:
 					view.Scale(e.Y, dx)
 					signalWindow.Draw(renderer)
 
-					spectraWindow.columnWidth = int32(fragmentSize) / int32(signalWindow.view.scaleFactor)
+					log.Tracef("Scale factor: %v\n", int32(view.scaleFactor))
 
-					log.Tracef("Scale factor: %v\n", int32(signalWindow.view.scaleFactor))
-
-					spectraWindow.SetDx(int32(signalWindow.view.start / signalWindow.view.scaleFactor))
 					spectraWindow.Draw(renderer)
 					renderer.Present()
 				}
