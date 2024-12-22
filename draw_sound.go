@@ -23,30 +23,17 @@ const barWidth = 1
 const lowerMeaningfulHarmonic = 7
 const upperMeaningfulHarmonic = 31
 
-type SignalWindow struct {
-	buf            []float64
-	area           AreaRect
-	start          int
-	scaleFactor    int
-	norm           float64
-	selectedBlocks []bool
+type View struct {
+	start       int
+	scaleFactor int
 }
 
-func NewSignalWindow(res []float64) *SignalWindow {
-	selectedBlocksLen := len(res) / fragmentSize
-	if len(res)%fragmentSize > 0 {
-		selectedBlocksLen++
-	}
-	return &SignalWindow{res, AreaRect{0, 0, 0, 0}, 0, 1, 0, make([]bool, selectedBlocksLen)}
+func NewView() *View {
+	return &View{0, 1}
 }
 
-func (this *SignalWindow) SelectBlock(p sdl.Point) {
-	selectedBlock := (int(p.X)*this.scaleFactor + this.start) / fragmentSize
-	this.selectedBlocks[selectedBlock] = true
-}
-
-func (this *SignalWindow) Scale(s int32, mousePos sdl.Point) {
-	cursorRelativeToArea := (mousePos.X - this.area.x) / barWidth
+func (this *View) Scale(s int32, dx int32) {
+	cursorRelativeToArea := dx / barWidth
 	fixedPoint := this.start + int(cursorRelativeToArea)*this.scaleFactor
 	if int(s) < 0 {
 		this.scaleFactor <<= int(-s)
@@ -59,21 +46,42 @@ func (this *SignalWindow) Scale(s int32, mousePos sdl.Point) {
 	this.start = (fixedPoint/this.scaleFactor - int(cursorRelativeToArea)) * this.scaleFactor
 }
 
-func (this *SignalWindow) Renorm(v int32) {
-	this.norm = float64(v) / float64(this.area.h) * this.norm
-}
-
-func (this *SignalWindow) Shift(d int) {
+func (this *View) Shift(d int) {
 	log.Tracef("Shift by: %v\n", d)
 	log.Tracef("Scale factor: %v\n", this.scaleFactor)
 	this.start = this.start + d/barWidth*this.scaleFactor
 }
 
+type SignalWindow struct {
+	buf            []float64
+	area           AreaRect
+	view           *View
+	norm           float64
+	selectedBlocks []bool
+}
+
+func NewSignalWindow(res []float64, view *View) *SignalWindow {
+	selectedBlocksLen := len(res) / fragmentSize
+	if len(res)%fragmentSize > 0 {
+		selectedBlocksLen++
+	}
+	return &SignalWindow{res, AreaRect{0, 0, 0, 0}, view, 0, make([]bool, selectedBlocksLen)}
+}
+
+func (this *SignalWindow) SelectBlock(p sdl.Point) {
+	selectedBlock := (int(p.X)*this.view.scaleFactor + this.view.start) / fragmentSize
+	this.selectedBlocks[selectedBlock] = true
+}
+
+func (this *SignalWindow) Renorm(v int32) {
+	this.norm = float64(v) / float64(this.area.h) * this.norm
+}
+
 func (sw *SignalWindow) Get(v int) (l, u float64) {
 	l = 0
 	u = 0
-	start := v * sw.scaleFactor
-	end := (v + 1) * sw.scaleFactor
+	start := v * sw.view.scaleFactor
+	end := (v + 1) * sw.view.scaleFactor
 	if end < start {
 		start, end = end, start
 	}
@@ -112,12 +120,12 @@ func (sw *SignalWindow) Draw(renderer *sdl.Renderer) {
 	if math.Abs(sw.norm) < 0.00001 {
 		sw.norm = sw.Max()
 	}
-	log.Tracef("Start: %v\n", sw.start)
-	for i := sw.start / sw.scaleFactor; i < sw.start/sw.scaleFactor+int(sw.area.w)/barWidth; i++ {
+	log.Tracef("Start: %v\n", sw.view.start)
+	for i := sw.view.start / sw.view.scaleFactor; i < sw.view.start/sw.view.scaleFactor+int(sw.area.w)/barWidth; i++ {
 		l, u := sw.Get(i)
 		lh := sw.Normalize(l)
 		uh := sw.Normalize(u)
-		x := int32(i - sw.start/sw.scaleFactor)
+		x := int32(i - sw.view.start/sw.view.scaleFactor)
 		rect := &sdl.Rect{sw.area.x + x*barWidth, sw.area.y + sw.area.h/2 - uh, barWidth, uh - lh}
 		renderer.FillRect(rect)
 	}
@@ -220,7 +228,8 @@ func drawSound(audioFile string) {
 		nil,
 		nil,
 	)
-	view := NewSignalWindow(res)
+	view := NewView()
+	signalWindow := NewSignalWindow(res, view)
 	spectraWindow := &HeatMap{spectra, AreaRect{0, 0, 0, 0}, fragmentSize, 0}
 
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
@@ -251,8 +260,8 @@ outer:
 				if e.Event == sdl.WINDOWEVENT_RESIZED {
 					windowSize.Width = e.Data1
 					windowSize.Height = e.Data2
-					view.area.w = windowSize.Width
-					view.area.h = windowSize.Height / 2
+					signalWindow.area.w = windowSize.Width
+					signalWindow.area.h = windowSize.Height / 2
 					spectraWindow.area.y = windowSize.Height / 2
 					spectraWindow.area.w = windowSize.Width
 					spectraWindow.area.h = windowSize.Height / 2
@@ -261,7 +270,7 @@ outer:
 				renderer.SetDrawColor(242, 242, 242, 255)
 				renderer.Clear()
 
-				view.Draw(renderer)
+				signalWindow.Draw(renderer)
 				spectraWindow.Draw(renderer)
 				renderer.Present()
 			case *sdl.MouseMotionEvent:
@@ -272,9 +281,9 @@ outer:
 
 					view.Shift(int(clickOffset.X - mousePos.X))
 					clickOffset.X = mousePos.X
-					view.Draw(renderer)
+					signalWindow.Draw(renderer)
 
-					spectraWindow.SetDx(int32(view.start / view.scaleFactor))
+					spectraWindow.SetDx(int32(signalWindow.view.start / signalWindow.view.scaleFactor))
 					spectraWindow.Draw(renderer)
 					renderer.Present()
 				}
@@ -289,14 +298,15 @@ outer:
 					renderer.SetDrawColor(242, 242, 242, 255)
 					renderer.Clear()
 
-					view.Scale(e.Y, mousePos)
-					view.Draw(renderer)
+					dx := mousePos.X - signalWindow.area.x
+					view.Scale(e.Y, dx)
+					signalWindow.Draw(renderer)
 
-					spectraWindow.columnWidth = int32(fragmentSize) / int32(view.scaleFactor)
+					spectraWindow.columnWidth = int32(fragmentSize) / int32(signalWindow.view.scaleFactor)
 
-					log.Tracef("Scale factor: %v\n", int32(view.scaleFactor))
+					log.Tracef("Scale factor: %v\n", int32(signalWindow.view.scaleFactor))
 
-					spectraWindow.SetDx(int32(view.start / view.scaleFactor))
+					spectraWindow.SetDx(int32(signalWindow.view.start / signalWindow.view.scaleFactor))
 					spectraWindow.Draw(renderer)
 					renderer.Present()
 				}
@@ -321,14 +331,14 @@ outer:
 						rightMouseButtonDown = true
 						rightClickOffset.X = mousePos.X
 						rightClickOffset.Y = mousePos.Y
-						view.SelectBlock(rightClickOffset)
+						signalWindow.SelectBlock(rightClickOffset)
 					}
 					if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_LEFT {
-						if e.Y < view.area.y+view.area.h/2 {
+						if e.Y < signalWindow.area.y+signalWindow.area.h/2 {
 							renderer.SetDrawColor(242, 242, 242, 255)
 							renderer.Clear()
-							view.Renorm(view.area.y + view.area.h/2 - clickOffset.Y)
-							view.Draw(renderer)
+							signalWindow.Renorm(signalWindow.area.y + signalWindow.area.h/2 - clickOffset.Y)
+							signalWindow.Draw(renderer)
 							spectraWindow.Draw(renderer)
 							renderer.Present()
 						}
@@ -336,8 +346,8 @@ outer:
 					if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_RIGHT {
 						renderer.SetDrawColor(242, 242, 242, 255)
 						renderer.Clear()
-						view.norm = view.Max()
-						view.Draw(renderer)
+						signalWindow.norm = signalWindow.Max()
+						signalWindow.Draw(renderer)
 						spectraWindow.Draw(renderer)
 						renderer.Present()
 					}
