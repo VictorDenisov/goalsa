@@ -197,6 +197,7 @@ func drawSound(audioFile string) {
 		nil,
 	)
 	view := NewView()
+	selection := NewSelection(view, AreaRect{0, 0, 0, 0}, len(res))
 	signalWindow := NewSignalWindow(res, view)
 	spectraWindow := &HeatMap{spectra, AreaRect{0, 0, 0, 0}, view}
 
@@ -233,11 +234,13 @@ outer:
 					spectraWindow.area.y = windowSize.Height / 2
 					spectraWindow.area.w = windowSize.Width
 					spectraWindow.area.h = windowSize.Height / 2
-
+					selection.area.w = windowSize.Width
+					selection.area.h = windowSize.Height
 				}
 				renderer.SetDrawColor(242, 242, 242, 255)
 				renderer.Clear()
 
+				selection.Draw(renderer)
 				signalWindow.Draw(renderer)
 				spectraWindow.Draw(renderer)
 				renderer.Present()
@@ -249,9 +252,11 @@ outer:
 
 					view.Shift(int(clickOffset.X - mousePos.X))
 					clickOffset.X = mousePos.X
-					signalWindow.Draw(renderer)
 
+					selection.Draw(renderer)
+					signalWindow.Draw(renderer)
 					spectraWindow.Draw(renderer)
+
 					renderer.Present()
 				}
 
@@ -267,11 +272,13 @@ outer:
 
 					dx := mousePos.X - signalWindow.area.x
 					view.Scale(e.Y, dx)
-					signalWindow.Draw(renderer)
 
 					log.Tracef("Scale factor: %v\n", int32(view.scaleFactor))
 
+					selection.Draw(renderer)
+					signalWindow.Draw(renderer)
 					spectraWindow.Draw(renderer)
+
 					renderer.Present()
 				}
 
@@ -295,13 +302,21 @@ outer:
 						rightMouseButtonDown = true
 						rightClickOffset.X = mousePos.X
 						rightClickOffset.Y = mousePos.Y
-						signalWindow.SelectBlock(rightClickOffset)
+						selection.SelectBlock(mousePos)
+
+						renderer.SetDrawColor(242, 242, 242, 255)
+						renderer.Clear()
+						selection.Draw(renderer)
+						signalWindow.Draw(renderer)
+						spectraWindow.Draw(renderer)
+						renderer.Present()
 					}
 					if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_LEFT {
 						if e.Y < signalWindow.area.y+signalWindow.area.h/2 {
 							renderer.SetDrawColor(242, 242, 242, 255)
 							renderer.Clear()
 							signalWindow.Renorm(signalWindow.area.y + signalWindow.area.h/2 - clickOffset.Y)
+							selection.Draw(renderer)
 							signalWindow.Draw(renderer)
 							spectraWindow.Draw(renderer)
 							renderer.Present()
@@ -311,6 +326,7 @@ outer:
 						renderer.SetDrawColor(242, 242, 242, 255)
 						renderer.Clear()
 						signalWindow.norm = signalWindow.Max()
+						selection.Draw(renderer)
 						signalWindow.Draw(renderer)
 						spectraWindow.Draw(renderer)
 						renderer.Present()
