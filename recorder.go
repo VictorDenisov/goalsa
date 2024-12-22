@@ -24,7 +24,7 @@ func record(fileName string, device string) {
 
 	rc = C.snd_pcm_open(&handle, deviceCString, C.SND_PCM_STREAM_CAPTURE, 0)
 	if rc < 0 {
-		log.Fatal("Unable to open pcm device: %v", C.snd_strerror(rc))
+		log.Fatalf("Unable to open pcm device: %v", C.snd_strerror(rc))
 	}
 	defer C.snd_pcm_close(handle)
 	defer C.snd_pcm_drain(handle)
