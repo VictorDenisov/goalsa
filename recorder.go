@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
+
 	"unsafe"
 
 	log "github.com/sirupsen/logrus"
@@ -16,6 +19,8 @@ import (
 import "C"
 
 func record(fileName string, device string) {
+	done := setupSignalHandling()
+
 	var handle *C.snd_pcm_t
 	var rc C.int
 
@@ -85,15 +90,21 @@ func record(fileName string, device string) {
 	if rc < 0 {
 		log.Fatal("Couldn't get period time")
 	}
-	var loops C.long = 10_000_000 / C.long(val)
 
 	out, err := os.Create(fileName)
 	if err != nil {
 		log.Fatalf("Couldn't create output file: %v", err)
 	}
 	defer out.Close()
-	for loops > 0 {
-		loops--
+loop:
+	for {
+		select {
+		case <-done:
+			out.Close()
+			break loop
+		default:
+		}
+
 		var rcl C.long
 		rcl = C.snd_pcm_readi(handle, unsafe.Pointer(&buffer[0]), frames)
 		if rcl == -C.EPIPE {
@@ -110,4 +121,21 @@ func record(fileName string, device string) {
 			fmt.Printf("Failed to write: %v\n", err)
 		}
 	}
+}
+
+func setupSignalHandling() chan bool {
+	sigs := make(chan os.Signal, 1)
+
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	done := make(chan bool, 1)
+
+	go func() {
+		sig := <-sigs
+		fmt.Println()
+		fmt.Println(sig)
+		done <- true
+	}()
+
+	return done
 }

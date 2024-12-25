@@ -1,3 +1,3 @@
 #!/bin/bash
 
-arecord -f S24_3LE --device="hw:2,0" test-mic.wav
+arecord -f S32_LE --device="plughw:0,0" test-mic.wav
