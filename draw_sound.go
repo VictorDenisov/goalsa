@@ -128,6 +128,7 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 	log.Tracef("area width: %v\n", this.area.w)
 	log.Tracef("area height: %v\n", this.area.h)
 	columnCount := (this.area.w - shift) / columnWidth
+	lastIncompleteColumnWidth := (this.area.w - shift) % columnWidth
 
 	log.Tracef("Column count: %v\n", columnCount)
 	cellHeight := this.area.h / int32(upperMeaningfulHarmonic-lowerMeaningfulHarmonic)
@@ -165,6 +166,17 @@ func (this *HeatMap) Draw(renderer *sdl.Renderer) {
 			renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
 			renderer.FillRect(rect)
 		}
+	}
+	lastI := startI + columnCount
+	if lastI > int32(len(this.buf)) {
+		return
+	}
+
+	for j := int32(lowerMeaningfulHarmonic); j < int32(upperMeaningfulHarmonic); j++ {
+		normalizedValue := uint8(this.buf[lastI][j] / maxValue * 255)
+		rect := &sdl.Rect{this.area.x + shift + (lastI-startI)*columnWidth, this.area.y + (j-lowerMeaningfulHarmonic)*cellHeight, lastIncompleteColumnWidth, cellHeight}
+		renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
+		renderer.FillRect(rect)
 	}
 }
 
