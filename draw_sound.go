@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"math"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -22,163 +21,6 @@ const barWidth = 1
 
 const lowerMeaningfulHarmonic = 7
 const upperMeaningfulHarmonic = 31
-
-type SignalWindow struct {
-	buf  []float64
-	area AreaRect
-	view *View
-	norm float64
-}
-
-func NewSignalWindow(res []float64, view *View) *SignalWindow {
-	selectedBlocksLen := len(res) / fragmentSize
-	if len(res)%fragmentSize > 0 {
-		selectedBlocksLen++
-	}
-	return &SignalWindow{res, AreaRect{0, 0, 0, 0}, view, 0}
-}
-
-func (this *SignalWindow) Renorm(v int32) {
-	this.norm = float64(v) / float64(this.area.h) * this.norm
-}
-
-func (sw *SignalWindow) Get(v int) (l, u float64) {
-	l = 0
-	u = 0
-	start := v * sw.view.scaleFactor
-	end := (v + 1) * sw.view.scaleFactor
-	if end < start {
-		start, end = end, start
-	}
-	for i := start; i < end; i++ {
-		if i >= len(sw.buf) {
-			break
-		}
-		if i < 0 {
-			break
-		}
-		if sw.buf[i] > u {
-			u = sw.buf[i]
-		}
-		if sw.buf[i] < l {
-			l = sw.buf[i]
-		}
-	}
-	return l, u
-}
-
-func (sw *SignalWindow) Max() (mx float64) {
-	for i := 0; i < len(sw.buf); i++ {
-		if math.Abs(sw.buf[i]) > mx {
-			mx = math.Abs(sw.buf[i])
-		}
-	}
-	return
-}
-
-func (this *SignalWindow) Normalize(v float64) int32 {
-	return int32(float64(this.area.h) / 2.0 * float64(v) / float64(this.norm))
-}
-
-func (sw *SignalWindow) Draw(renderer *sdl.Renderer) {
-	renderer.SetDrawColor(0, 255, 0, 255)
-	if math.Abs(sw.norm) < 0.00001 {
-		sw.norm = sw.Max()
-	}
-	log.Tracef("Start: %v\n", sw.view.start)
-	for i := sw.view.start / sw.view.scaleFactor; i < sw.view.start/sw.view.scaleFactor+int(sw.area.w)/barWidth; i++ {
-		l, u := sw.Get(i)
-		lh := sw.Normalize(l)
-		uh := sw.Normalize(u)
-		x := int32(i - sw.view.start/sw.view.scaleFactor)
-		rect := &sdl.Rect{sw.area.x + x*barWidth, sw.area.y + sw.area.h/2 - uh, barWidth, uh - lh}
-		renderer.FillRect(rect)
-	}
-}
-
-type HeatMap struct {
-	buf  [][]float64
-	area AreaRect
-	view *View
-}
-
-func (this *HeatMap) Draw(renderer *sdl.Renderer) {
-	dx := int32(this.view.start / this.view.scaleFactor)
-	columnWidth := int32(fragmentSize) / int32(this.view.scaleFactor)
-	startI := int32(0) // First window that is going to be rendered.
-	shift := int32(0)  // Offset of the fisrt rendered window relative to area's left boundary.
-
-	if dx > 0 {
-		startI = dx / columnWidth
-		if dx%columnWidth > 0 {
-			startI++
-		}
-		if startI >= int32(len(this.buf)) {
-			return
-		}
-		log.Tracef("StartI: %v\n", startI)
-		if dx%columnWidth > 0 {
-			shift = columnWidth - dx%columnWidth
-		}
-	} else {
-		startI = 0
-		shift = -dx
-	}
-	log.Tracef("ColumnWidth: %v\n", columnWidth)
-	log.Tracef("area width: %v\n", this.area.w)
-	log.Tracef("area height: %v\n", this.area.h)
-	columnCount := (this.area.w - shift) / columnWidth
-	lastIncompleteColumnWidth := (this.area.w - shift) % columnWidth
-
-	log.Tracef("Column count: %v\n", columnCount)
-	cellHeight := this.area.h / int32(upperMeaningfulHarmonic-lowerMeaningfulHarmonic)
-	log.Tracef("cell height: %v\n", cellHeight)
-
-	maxValue := this.buf[startI][0]
-	log.Tracef("Len: %v\n", len(this.buf[startI]))
-	firstMax := startI
-	if shift > 0 && firstMax > 0 {
-		firstMax--
-	}
-	for i := firstMax; i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
-		for j := lowerMeaningfulHarmonic; j < upperMeaningfulHarmonic; j++ {
-			if maxValue < this.buf[i][j] {
-				maxValue = this.buf[i][j]
-			}
-		}
-	}
-	log.Tracef("Max value: %v\n", maxValue)
-
-	// Draw first incomplete window.
-	if startI > 0 {
-		for j := int32(lowerMeaningfulHarmonic); j < int32(upperMeaningfulHarmonic); j++ {
-			normalizedValue := uint8(this.buf[startI-1][j] / maxValue * 255)
-			rect := &sdl.Rect{this.area.x, this.area.y + (j-lowerMeaningfulHarmonic)*cellHeight, shift, cellHeight}
-
-			renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
-			renderer.FillRect(rect)
-		}
-	}
-	for i := int32(startI); i < minInt32(startI+columnCount, int32(len(this.buf))); i++ {
-		for j := int32(lowerMeaningfulHarmonic); j < int32(upperMeaningfulHarmonic); j++ {
-			normalizedValue := uint8(this.buf[i][j] / maxValue * 255)
-			rect := &sdl.Rect{this.area.x + shift + (i-startI)*columnWidth, this.area.y + (j-lowerMeaningfulHarmonic)*cellHeight, columnWidth, cellHeight}
-			renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
-			renderer.FillRect(rect)
-		}
-	}
-	lastI := startI + columnCount
-	if lastI > int32(len(this.buf)) {
-		return
-	}
-
-	for j := int32(lowerMeaningfulHarmonic); j < int32(upperMeaningfulHarmonic); j++ {
-		normalizedValue := uint8(this.buf[lastI][j] / maxValue * 255)
-		rect := &sdl.Rect{this.area.x + shift + (lastI-startI)*columnWidth, this.area.y + (j-lowerMeaningfulHarmonic)*cellHeight, lastIncompleteColumnWidth, cellHeight}
-		renderer.SetDrawColor(255-normalizedValue, 255, 255-normalizedValue, 255)
-		renderer.FillRect(rect)
-	}
-}
 
 func minInt32(a, b int32) int32 {
 	if a < b {
@@ -368,13 +210,4 @@ func abs16(v int16) int16 {
 		return -v
 	}
 	return v
-}
-
-func shrinkSignal(buf []float64) (r []float64) {
-	n := len(buf) / 2
-	r = make([]float64, n)
-	for i := 0; i < n; i++ {
-		r[i] = (buf[2*i] + buf[2*i+1]) / 2
-	}
-	return
 }
