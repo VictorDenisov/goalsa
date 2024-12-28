@@ -1,9 +1,6 @@
 package main
 
 import (
-	"encoding/binary"
-	"os"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -185,29 +182,4 @@ outer:
 		}
 	}
 	sdl.Quit()
-}
-
-func readFileData(fileName string) ([]int16, error) {
-	file, err := os.Open(fileName)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	buf := make([]int16, 0)
-	for {
-		var v int16
-		err := binary.Read(file, binary.LittleEndian, &v)
-		if err != nil {
-			break
-		}
-		buf = append(buf, v)
-	}
-	return buf, nil
-}
-
-func abs16(v int16) int16 {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
