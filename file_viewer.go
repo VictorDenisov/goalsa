@@ -49,11 +49,6 @@ func viewFile(audioFile string) {
 	signalWindow := NewSignalWindow(res, view)
 	spectraWindow := &HeatMap{spectra, AreaRect{0, 0, 0, 0}, view}
 
-	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
-		panic(err)
-	}
-	defer sdl.Quit()
-
 	window, err := sdl.CreateWindow(audioFile, sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
 		800, 600, sdl.WINDOW_SHOWN|sdl.WINDOW_RESIZABLE)
 	if err != nil {

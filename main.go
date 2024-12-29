@@ -80,7 +80,7 @@ func main() {
 				Aliases: []string{"v"},
 				Action: func(cCtx *cli.Context) error {
 					fmt.Printf("Handling file name: %s\n", fileName)
-					viewFile(fileName)
+					MainLoop(fileName)
 					return nil
 				},
 				Flags: []cli.Flag{
