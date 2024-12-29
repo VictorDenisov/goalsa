@@ -17,13 +17,13 @@ func MainLoop(fileName string) {
 	defer fileViewer.Destroy()
 
 	done := make(chan struct{})
-	complete := make(chan struct{})
-	go RenderLoop(fileViewer, done, complete)
+	renderLoopComplete := make(chan struct{})
+	go RenderLoop(fileViewer, done, renderLoopComplete)
 	sdl.Main(func() {
-		EventLoop(fileViewer, done, complete)
+		EventLoop(fileViewer, done, renderLoopComplete)
 	})
 	log.Info("Waiting for completion2")
-	<-complete
+	<-renderLoopComplete
 }
 
 func EventLoop(fileViewer *FileViewer, done, complete chan struct{}) {
