@@ -7,6 +7,19 @@ import (
 )
 
 type FileViewer struct {
+	window   *sdl.Window
+	renderer *sdl.Renderer
+
+	windowSize WindowSize
+
+	leftMouseButtonDown, rightMouseButtonDown bool
+	clickOffset                               sdl.Point
+	rightClickOffset                          sdl.Point
+
+	view          *View
+	selection     *Selection
+	signalWindow  *SignalWindow
+	spectraWindow *HeatMap
 }
 
 type WindowSize struct {
@@ -31,13 +44,122 @@ func minInt32(a, b int32) int32 {
 	}
 }
 
-func viewFile(audioFile string) {
-	var windowSize WindowSize
+func (this *FileViewer) handleEvent(event sdl.Event) {
+	switch e := event.(type) {
+	case *sdl.WindowEvent:
+		if e.Event == sdl.WINDOWEVENT_RESIZED {
+			this.windowSize.Width = e.Data1
+			this.windowSize.Height = e.Data2
+			this.signalWindow.area.w = this.windowSize.Width
+			this.signalWindow.area.h = this.windowSize.Height / 2
+			this.spectraWindow.area.y = this.windowSize.Height / 2
+			this.spectraWindow.area.w = this.windowSize.Width
+			this.spectraWindow.area.h = this.windowSize.Height / 2
+			this.selection.area.w = this.windowSize.Width
+			this.selection.area.h = this.windowSize.Height
+		}
+		this.renderer.SetDrawColor(242, 242, 242, 255)
+		this.renderer.Clear()
 
-	var leftMouseButtonDown, rightMouseButtonDown bool
-	var mousePos sdl.Point
-	var clickOffset sdl.Point
-	var rightClickOffset sdl.Point
+		this.selection.Draw(this.renderer)
+		this.signalWindow.Draw(this.renderer)
+		this.spectraWindow.Draw(this.renderer)
+		this.renderer.Present()
+	case *sdl.MouseMotionEvent:
+		mousePos := sdl.Point{e.X, e.Y}
+		log.Tracef("Mouse position: %v\n", mousePos)
+		if this.leftMouseButtonDown {
+			this.renderer.SetDrawColor(242, 242, 242, 255)
+			this.renderer.Clear()
+
+			this.view.Shift(int(this.clickOffset.X - mousePos.X))
+			this.clickOffset.X = mousePos.X
+
+			this.selection.Draw(this.renderer)
+			this.signalWindow.Draw(this.renderer)
+			this.spectraWindow.Draw(this.renderer)
+
+			this.renderer.Present()
+		}
+
+	case *sdl.MouseWheelEvent:
+		keyboardState := sdl.GetModState()
+		mx, my, _ := sdl.GetMouseState()
+		mousePos := sdl.Point{mx, my}
+		if keyboardState&sdl.KMOD_LSHIFT > 0 {
+			println("Shift is pressed")
+		} else {
+			this.renderer.SetDrawColor(242, 242, 242, 255)
+			this.renderer.Clear()
+
+			dx := mousePos.X - this.signalWindow.area.x
+			this.view.Scale(e.Y, dx)
+
+			log.Tracef("Scale factor: %v\n", int32(this.view.scaleFactor))
+
+			this.selection.Draw(this.renderer)
+			this.signalWindow.Draw(this.renderer)
+			this.spectraWindow.Draw(this.renderer)
+
+			this.renderer.Present()
+		}
+
+	case *sdl.MouseButtonEvent:
+		keyboardState := sdl.GetModState()
+		mx, my, _ := sdl.GetMouseState()
+		mousePos := sdl.Point{mx, my}
+		if e.Type == sdl.MOUSEBUTTONUP {
+			if this.leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
+				this.leftMouseButtonDown = false
+			}
+			if this.rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
+				this.rightMouseButtonDown = false
+			}
+		} else if e.Type == sdl.MOUSEBUTTONDOWN {
+			if !this.leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
+				this.leftMouseButtonDown = true
+				this.clickOffset.X = mousePos.X
+				this.clickOffset.Y = mousePos.Y
+				log.Tracef("click x: %v\n", this.clickOffset.X)
+			}
+			if !this.rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
+				this.rightMouseButtonDown = true
+				this.rightClickOffset.X = mousePos.X
+				this.rightClickOffset.Y = mousePos.Y
+				this.selection.SelectBlock(mousePos)
+
+				this.renderer.SetDrawColor(242, 242, 242, 255)
+				this.renderer.Clear()
+				this.selection.Draw(this.renderer)
+				this.signalWindow.Draw(this.renderer)
+				this.spectraWindow.Draw(this.renderer)
+				this.renderer.Present()
+			}
+			if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_LEFT {
+				if e.Y < this.signalWindow.area.y+this.signalWindow.area.h/2 {
+					this.renderer.SetDrawColor(242, 242, 242, 255)
+					this.renderer.Clear()
+					this.signalWindow.Renorm(this.signalWindow.area.y + this.signalWindow.area.h/2 - this.clickOffset.Y)
+					this.selection.Draw(this.renderer)
+					this.signalWindow.Draw(this.renderer)
+					this.spectraWindow.Draw(this.renderer)
+					this.renderer.Present()
+				}
+			}
+			if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_RIGHT {
+				this.renderer.SetDrawColor(242, 242, 242, 255)
+				this.renderer.Clear()
+				this.signalWindow.norm = this.signalWindow.Max()
+				this.selection.Draw(this.renderer)
+				this.signalWindow.Draw(this.renderer)
+				this.spectraWindow.Draw(this.renderer)
+				this.renderer.Present()
+			}
+		}
+	}
+}
+
+func viewFile(audioFile string) {
 
 	_, res, _, _, spectra, _ := processFile(
 		audioFile,
@@ -61,123 +183,28 @@ func viewFile(audioFile string) {
 		panic(err)
 	}
 	defer renderer.Destroy()
+	fileViewer := FileViewer{
+		window,
+		renderer,
+		WindowSize{800, 600},
+		false,
+		false,
+		sdl.Point{0, 0},
+		sdl.Point{0, 0},
+		view,
+		selection,
+		signalWindow,
+		spectraWindow}
 outer:
 	for {
 		for event := sdl.WaitEvent(); event != nil; event = sdl.WaitEvent() {
-			switch e := event.(type) {
+			switch event.(type) {
 			case *sdl.QuitEvent:
 				println("Quit")
 				break outer
-			case *sdl.WindowEvent:
-				if e.Event == sdl.WINDOWEVENT_RESIZED {
-					windowSize.Width = e.Data1
-					windowSize.Height = e.Data2
-					signalWindow.area.w = windowSize.Width
-					signalWindow.area.h = windowSize.Height / 2
-					spectraWindow.area.y = windowSize.Height / 2
-					spectraWindow.area.w = windowSize.Width
-					spectraWindow.area.h = windowSize.Height / 2
-					selection.area.w = windowSize.Width
-					selection.area.h = windowSize.Height
-				}
-				renderer.SetDrawColor(242, 242, 242, 255)
-				renderer.Clear()
-
-				selection.Draw(renderer)
-				signalWindow.Draw(renderer)
-				spectraWindow.Draw(renderer)
-				renderer.Present()
-			case *sdl.MouseMotionEvent:
-				mousePos = sdl.Point{e.X, e.Y}
-				if leftMouseButtonDown {
-					renderer.SetDrawColor(242, 242, 242, 255)
-					renderer.Clear()
-
-					view.Shift(int(clickOffset.X - mousePos.X))
-					clickOffset.X = mousePos.X
-
-					selection.Draw(renderer)
-					signalWindow.Draw(renderer)
-					spectraWindow.Draw(renderer)
-
-					renderer.Present()
-				}
-
-			case *sdl.MouseWheelEvent:
-				keyboardState := sdl.GetModState()
-				mx, my, _ := sdl.GetMouseState()
-				mousePos = sdl.Point{mx, my}
-				if keyboardState&sdl.KMOD_LSHIFT > 0 {
-					println("Shift is pressed")
-				} else {
-					renderer.SetDrawColor(242, 242, 242, 255)
-					renderer.Clear()
-
-					dx := mousePos.X - signalWindow.area.x
-					view.Scale(e.Y, dx)
-
-					log.Tracef("Scale factor: %v\n", int32(view.scaleFactor))
-
-					selection.Draw(renderer)
-					signalWindow.Draw(renderer)
-					spectraWindow.Draw(renderer)
-
-					renderer.Present()
-				}
-
-			case *sdl.MouseButtonEvent:
-				keyboardState := sdl.GetModState()
-				if e.Type == sdl.MOUSEBUTTONUP {
-					if leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
-						leftMouseButtonDown = false
-					}
-					if rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
-						rightMouseButtonDown = false
-					}
-				} else if e.Type == sdl.MOUSEBUTTONDOWN {
-					if !leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
-						leftMouseButtonDown = true
-						clickOffset.X = mousePos.X
-						clickOffset.Y = mousePos.Y
-						log.Tracef("click x: %v\n", clickOffset.X)
-					}
-					if !rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
-						rightMouseButtonDown = true
-						rightClickOffset.X = mousePos.X
-						rightClickOffset.Y = mousePos.Y
-						selection.SelectBlock(mousePos)
-
-						renderer.SetDrawColor(242, 242, 242, 255)
-						renderer.Clear()
-						selection.Draw(renderer)
-						signalWindow.Draw(renderer)
-						spectraWindow.Draw(renderer)
-						renderer.Present()
-					}
-					if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_LEFT {
-						if e.Y < signalWindow.area.y+signalWindow.area.h/2 {
-							renderer.SetDrawColor(242, 242, 242, 255)
-							renderer.Clear()
-							signalWindow.Renorm(signalWindow.area.y + signalWindow.area.h/2 - clickOffset.Y)
-							selection.Draw(renderer)
-							signalWindow.Draw(renderer)
-							spectraWindow.Draw(renderer)
-							renderer.Present()
-						}
-					}
-					if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_RIGHT {
-						renderer.SetDrawColor(242, 242, 242, 255)
-						renderer.Clear()
-						signalWindow.norm = signalWindow.Max()
-						selection.Draw(renderer)
-						signalWindow.Draw(renderer)
-						spectraWindow.Draw(renderer)
-						renderer.Present()
-					}
-				}
+			default:
+				fileViewer.handleEvent(event)
 			}
-
 		}
 	}
-	sdl.Quit()
 }
