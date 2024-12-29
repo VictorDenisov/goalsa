@@ -13,8 +13,6 @@ type FileViewer struct {
 	windowSize WindowSize
 
 	leftMouseButtonDown, rightMouseButtonDown bool
-	clickOffset                               sdl.Point
-	rightClickOffset                          sdl.Point
 
 	view          *View
 	selection     *Selection
@@ -68,12 +66,11 @@ func (this *FileViewer) handleEvent(event sdl.Event) {
 	case *sdl.MouseMotionEvent:
 		mousePos := sdl.Point{e.X, e.Y}
 		log.Tracef("Mouse position: %v\n", mousePos)
-		if this.leftMouseButtonDown {
+		if e.State&sdl.BUTTON_LEFT > 0 {
 			this.renderer.SetDrawColor(242, 242, 242, 255)
 			this.renderer.Clear()
 
-			this.view.Shift(int(this.clickOffset.X - mousePos.X))
-			this.clickOffset.X = mousePos.X
+			this.view.Shift(int(-e.XRel))
 
 			this.selection.Draw(this.renderer)
 			this.signalWindow.Draw(this.renderer)
@@ -109,23 +106,15 @@ func (this *FileViewer) handleEvent(event sdl.Event) {
 		mx, my, _ := sdl.GetMouseState()
 		mousePos := sdl.Point{mx, my}
 		if e.Type == sdl.MOUSEBUTTONUP {
-			if this.leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
-				this.leftMouseButtonDown = false
-			}
 			if this.rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
 				this.rightMouseButtonDown = false
 			}
 		} else if e.Type == sdl.MOUSEBUTTONDOWN {
 			if !this.leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
 				this.leftMouseButtonDown = true
-				this.clickOffset.X = mousePos.X
-				this.clickOffset.Y = mousePos.Y
-				log.Tracef("click x: %v\n", this.clickOffset.X)
 			}
 			if !this.rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
 				this.rightMouseButtonDown = true
-				this.rightClickOffset.X = mousePos.X
-				this.rightClickOffset.Y = mousePos.Y
 				this.selection.SelectBlock(mousePos)
 
 				this.renderer.SetDrawColor(242, 242, 242, 255)
@@ -139,7 +128,7 @@ func (this *FileViewer) handleEvent(event sdl.Event) {
 				if e.Y < this.signalWindow.area.y+this.signalWindow.area.h/2 {
 					this.renderer.SetDrawColor(242, 242, 242, 255)
 					this.renderer.Clear()
-					this.signalWindow.Renorm(this.signalWindow.area.y + this.signalWindow.area.h/2 - this.clickOffset.Y)
+					this.signalWindow.Renorm(this.signalWindow.area.y + this.signalWindow.area.h/2 - my)
 					this.selection.Draw(this.renderer)
 					this.signalWindow.Draw(this.renderer)
 					this.spectraWindow.Draw(this.renderer)
@@ -187,8 +176,6 @@ func viewFile(audioFile string) *FileViewer {
 		WindowSize{800, 600},
 		false,
 		false,
-		sdl.Point{0, 0},
-		sdl.Point{0, 0},
 		view,
 		selection,
 		signalWindow,
