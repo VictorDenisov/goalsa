@@ -12,8 +12,6 @@ type FileViewer struct {
 
 	windowSize WindowSize
 
-	leftMouseButtonDown, rightMouseButtonDown bool
-
 	view          *View
 	selection     *Selection
 	signalWindow  *SignalWindow
@@ -58,9 +56,8 @@ func (this *FileViewer) handleEvent(event sdl.Event) {
 		}
 		this.Render()
 	case *sdl.MouseMotionEvent:
-		mousePos := sdl.Point{e.X, e.Y}
-		log.Tracef("Mouse position: %v\n", mousePos)
-		if e.State&sdl.BUTTON_LEFT > 0 {
+		log.Infof("Mouse state: %v\n", e.State)
+		if e.State&sdl.Button(sdl.BUTTON_RIGHT) > 0 {
 			this.view.Shift(int(-e.XRel))
 		}
 
@@ -84,15 +81,8 @@ func (this *FileViewer) handleEvent(event sdl.Event) {
 		mx, my, _ := sdl.GetMouseState()
 		mousePos := sdl.Point{mx, my}
 		if e.Type == sdl.MOUSEBUTTONUP {
-			if this.rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
-				this.rightMouseButtonDown = false
-			}
 		} else if e.Type == sdl.MOUSEBUTTONDOWN {
-			if !this.leftMouseButtonDown && e.Button == sdl.BUTTON_LEFT {
-				this.leftMouseButtonDown = true
-			}
-			if !this.rightMouseButtonDown && e.Button == sdl.BUTTON_RIGHT {
-				this.rightMouseButtonDown = true
+			if e.Button == sdl.BUTTON_LEFT {
 				this.selection.SelectBlock(mousePos)
 
 			}
@@ -134,8 +124,6 @@ func viewFile(audioFile string) *FileViewer {
 		window,
 		renderer,
 		WindowSize{800, 600},
-		false,
-		false,
 		view,
 		selection,
 		signalWindow,
