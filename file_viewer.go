@@ -2,8 +2,12 @@ package main
 
 import (
 	log "github.com/sirupsen/logrus"
+
 	"github.com/veandco/go-sdl2/sdl"
 )
+
+type FileViewer struct {
+}
 
 type WindowSize struct {
 	Width, Height int32
@@ -27,8 +31,7 @@ func minInt32(a, b int32) int32 {
 	}
 }
 
-func drawSound(audioFile string) {
-
+func viewFile(audioFile string) {
 	var windowSize WindowSize
 
 	var leftMouseButtonDown, rightMouseButtonDown bool
