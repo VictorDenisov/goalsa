@@ -56,27 +56,12 @@ func (this *FileViewer) handleEvent(event sdl.Event) {
 			this.selection.area.w = this.windowSize.Width
 			this.selection.area.h = this.windowSize.Height
 		}
-		this.renderer.SetDrawColor(242, 242, 242, 255)
-		this.renderer.Clear()
-
-		this.selection.Draw(this.renderer)
-		this.signalWindow.Draw(this.renderer)
-		this.spectraWindow.Draw(this.renderer)
-		this.renderer.Present()
+		this.Render()
 	case *sdl.MouseMotionEvent:
 		mousePos := sdl.Point{e.X, e.Y}
 		log.Tracef("Mouse position: %v\n", mousePos)
 		if e.State&sdl.BUTTON_LEFT > 0 {
-			this.renderer.SetDrawColor(242, 242, 242, 255)
-			this.renderer.Clear()
-
 			this.view.Shift(int(-e.XRel))
-
-			this.selection.Draw(this.renderer)
-			this.signalWindow.Draw(this.renderer)
-			this.spectraWindow.Draw(this.renderer)
-
-			this.renderer.Present()
 		}
 
 	case *sdl.MouseWheelEvent:
@@ -86,19 +71,12 @@ func (this *FileViewer) handleEvent(event sdl.Event) {
 		if keyboardState&sdl.KMOD_LSHIFT > 0 {
 			println("Shift is pressed")
 		} else {
-			this.renderer.SetDrawColor(242, 242, 242, 255)
-			this.renderer.Clear()
 
 			dx := mousePos.X - this.signalWindow.area.x
 			this.view.Scale(e.Y, dx)
 
 			log.Tracef("Scale factor: %v\n", int32(this.view.scaleFactor))
 
-			this.selection.Draw(this.renderer)
-			this.signalWindow.Draw(this.renderer)
-			this.spectraWindow.Draw(this.renderer)
-
-			this.renderer.Present()
 		}
 
 	case *sdl.MouseButtonEvent:
@@ -117,32 +95,14 @@ func (this *FileViewer) handleEvent(event sdl.Event) {
 				this.rightMouseButtonDown = true
 				this.selection.SelectBlock(mousePos)
 
-				this.renderer.SetDrawColor(242, 242, 242, 255)
-				this.renderer.Clear()
-				this.selection.Draw(this.renderer)
-				this.signalWindow.Draw(this.renderer)
-				this.spectraWindow.Draw(this.renderer)
-				this.renderer.Present()
 			}
 			if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_LEFT {
 				if e.Y < this.signalWindow.area.y+this.signalWindow.area.h/2 {
-					this.renderer.SetDrawColor(242, 242, 242, 255)
-					this.renderer.Clear()
 					this.signalWindow.Renorm(this.signalWindow.area.y + this.signalWindow.area.h/2 - my)
-					this.selection.Draw(this.renderer)
-					this.signalWindow.Draw(this.renderer)
-					this.spectraWindow.Draw(this.renderer)
-					this.renderer.Present()
 				}
 			}
 			if keyboardState&sdl.KMOD_LCTRL > 0 && e.Button == sdl.BUTTON_RIGHT {
-				this.renderer.SetDrawColor(242, 242, 242, 255)
-				this.renderer.Clear()
 				this.signalWindow.norm = this.signalWindow.Max()
-				this.selection.Draw(this.renderer)
-				this.signalWindow.Draw(this.renderer)
-				this.spectraWindow.Draw(this.renderer)
-				this.renderer.Present()
 			}
 		}
 	}
@@ -181,6 +141,17 @@ func viewFile(audioFile string) *FileViewer {
 		signalWindow,
 		spectraWindow}
 	return fileViewer
+}
+
+func (this *FileViewer) Render() {
+	this.renderer.SetDrawColor(242, 242, 242, 255)
+	this.renderer.Clear()
+
+	this.selection.Draw(this.renderer)
+	this.signalWindow.Draw(this.renderer)
+	this.spectraWindow.Draw(this.renderer)
+
+	this.renderer.Present()
 }
 
 func (this *FileViewer) Destroy() {
