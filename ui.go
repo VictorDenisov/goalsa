@@ -42,8 +42,12 @@ outer:
 	}
 }
 
+const (
+	Fps = 60
+)
+
 func RenderLoop(fileViewer *FileViewer, done, complete chan struct{}) {
-	ticker := time.NewTicker(1000 / 60 * time.Millisecond)
+	ticker := time.NewTicker(1000 / Fps * time.Millisecond)
 outer:
 	for {
 		select {
