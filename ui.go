@@ -10,5 +10,19 @@ func MainLoop(fileName string) {
 	}
 	defer sdl.Quit()
 
-	viewFile(fileName)
+	fileViewer := viewFile(fileName)
+	defer fileViewer.Destroy()
+
+outer:
+	for {
+		for event := sdl.WaitEvent(); event != nil; event = sdl.WaitEvent() {
+			switch event.(type) {
+			case *sdl.QuitEvent:
+				println("Quit")
+				break outer
+			default:
+				fileViewer.handleEvent(event)
+			}
+		}
+	}
 }

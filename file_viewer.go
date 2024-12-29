@@ -159,7 +159,7 @@ func (this *FileViewer) handleEvent(event sdl.Event) {
 	}
 }
 
-func viewFile(audioFile string) {
+func viewFile(audioFile string) *FileViewer {
 
 	_, res, _, _, spectra, _ := processFile(
 		audioFile,
@@ -176,14 +176,12 @@ func viewFile(audioFile string) {
 	if err != nil {
 		panic(err)
 	}
-	defer window.Destroy()
 
 	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
 	if err != nil {
 		panic(err)
 	}
-	defer renderer.Destroy()
-	fileViewer := FileViewer{
+	fileViewer := &FileViewer{
 		window,
 		renderer,
 		WindowSize{800, 600},
@@ -195,16 +193,10 @@ func viewFile(audioFile string) {
 		selection,
 		signalWindow,
 		spectraWindow}
-outer:
-	for {
-		for event := sdl.WaitEvent(); event != nil; event = sdl.WaitEvent() {
-			switch event.(type) {
-			case *sdl.QuitEvent:
-				println("Quit")
-				break outer
-			default:
-				fileViewer.handleEvent(event)
-			}
-		}
-	}
+	return fileViewer
+}
+
+func (this *FileViewer) Destroy() {
+	this.renderer.Destroy()
+	this.window.Destroy()
 }
