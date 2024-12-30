@@ -56,7 +56,6 @@ func (this *FileViewer) handleEvent(event sdl.Event) {
 		}
 		this.Render()
 	case *sdl.MouseMotionEvent:
-		log.Infof("Mouse state: %v\n", e.State)
 		if e.State&sdl.Button(sdl.BUTTON_RIGHT) > 0 {
 			this.view.Shift(int(-e.XRel))
 		}
