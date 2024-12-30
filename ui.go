@@ -8,18 +8,23 @@ import (
 )
 
 func MainLoop(fileName string) {
-	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
-		panic(err)
-	}
-	defer sdl.Quit()
-
-	fileViewer := viewFile(fileName)
-	defer fileViewer.Destroy()
-
 	done := make(chan struct{})
 	renderLoopComplete := make(chan struct{})
-	go RenderLoop(fileViewer, done, renderLoopComplete)
 	sdl.Main(func() {
+		sdl.Do(func() {
+			if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
+				panic(err)
+			}
+		})
+		defer sdl.Do(func() { sdl.Quit() })
+
+		var fileViewer *FileViewer
+		sdl.Do(func() {
+			fileViewer = viewFile(fileName)
+		})
+		defer sdl.Do(func() { fileViewer.Destroy() })
+
+		go RenderLoop(fileViewer, done, renderLoopComplete)
 		EventLoop(fileViewer, done, renderLoopComplete)
 	})
 	log.Info("Waiting for completion2")
@@ -29,15 +34,24 @@ func MainLoop(fileName string) {
 func EventLoop(fileViewer *FileViewer, done, complete chan struct{}) {
 outer:
 	for {
-		for event := sdl.WaitEvent(); event != nil; event = sdl.WaitEvent() {
+		var event sdl.Event
+		sdl.Do(func() {
+			event = sdl.WaitEvent()
+		})
+		for event != nil {
 			switch event.(type) {
 			case *sdl.QuitEvent:
 				println("Quit")
 				done <- struct{}{}
 				break outer
 			default:
-				fileViewer.handleEvent(event)
+				sdl.Do(func() {
+					fileViewer.handleEvent(event)
+				})
 			}
+			sdl.Do(func() {
+				event = sdl.WaitEvent()
+			})
 		}
 	}
 }
